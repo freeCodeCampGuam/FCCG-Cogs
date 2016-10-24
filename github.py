@@ -30,5 +30,12 @@ class GitHub(object):
             await self.bot.say("Repository verified. Adding to list of sources.")
             self.repos.append("/".join((owner, repo)))
 
+    @commands.command()
+    async def lsrepo(self):
+        """Lists currently added repos."""
+        r = "\n".join(["https://github.com/{}".format(s) for s in self.repos])
+        # turns list of repos into GitHub links
+        await self.bot.say("Currently added repositories: ```{}```".format(r))
+
 def setup(bot):
     bot.add_cog(GitHub(bot))
