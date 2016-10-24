@@ -14,8 +14,7 @@ class GitHub(object):
     def __init__(self, bot):
         self.bot = bot
         # set up permanant storage for assigned repos later
-        self.repos = [ # "centipeda/gh-cog-test-repo"
-                     ]
+        self.repos = []
 
     @commands.command()
     async def addrepo(self, owner: str, repo: str):
