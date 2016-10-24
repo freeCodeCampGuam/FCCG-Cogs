@@ -25,8 +25,11 @@ class GitHub(object):
             await self.bot.reply("Failed to add repository.")
             await self.bot.say("{}: {}".format(e.__name__,e))
         else:
-            await self.bot.say("Repository verified. Adding to list of sources.")
-            self.repos.append("/".join((owner, repo.name)))
+            if type(repo) is github3.repos.repo.Repository:
+                await self.bot.say("Repository verified. Adding to list of sources.")
+                self.repos.append("/".join((owner, repo.name)))
+            else:
+                await self.bot.say("Repository not found.")
 
     @commands.command()
     async def lsrepo(self):
