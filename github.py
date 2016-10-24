@@ -5,7 +5,6 @@
 # listing/sorting/linking issues/pull requests
 # issue submission directly from Discord
 
-import gitpython
 import github3
 import discord
 from discord.ext import commands
@@ -28,7 +27,7 @@ class GitHub(object):
             await self.bot.say("{}: {}".format(e.__name__,e))
         else:
             await self.bot.say("Repository verified. Adding to list of sources.")
-            self.repos.append("/".join((owner, repo)))
+            self.repos.append("/".join((owner, repo.name)))
 
     @commands.command()
     async def lsrepo(self):
