@@ -1,5 +1,11 @@
 """Accesses GitHub."""
 
+# To-do list:
+# timed digests
+# listing/sorting/linking issues/pull requests
+# issue submission directly from Discord
+
+import gitpython
 import discord
 from discord.ext import commands
 
