@@ -5,24 +5,24 @@
 # listing/sorting/linking issues/pull requests
 # issue submission directly from Discord
 
-import aiohttp
-import asyncio
+import os, os.path
+import aiohttp, asyncio
 import discord
 from discord.ext import commands
+from redcogs.utils import dataIO
 
-class GitHub(object):
+class Github(object):
 
     def __init__(self, bot):
         self.bot = bot
-        # set up permanant storage for assigned repos later
-        self.repos = []
+        self.settings = dataIO.load_json("data/github/settings.json")
         self.bot.loop.create_task(self.check_for_updates())
 
     async def check_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         while not self.bot.is_closed:
-            print("Beep!")
-            await asyncio.sleep(10) # placeholder
+            print("Beep!") # do checky things here
+            await asyncio.sleep(60) # placeholder
 
     @commands.command()
     async def addrepo(self, owner: str, repo: str):
@@ -45,5 +45,26 @@ class GitHub(object):
         # turns list of repos into GitHub links
         await self.bot.say("Currently added repositories: ```{}```".format(r))
 
+def check_folder():
+    if not os.path.exists("data/github"):
+        print("data/github not detected, creating folder...")
+        os.makedirs("data/github")
+
+def check_files():
+    defaultSettings = {}
+
+    s = "data/github/settings.json"
+    if not dataIO.is_valid_json(s):
+        print("valid github/settings.json not detected, creating...")
+        dataIO.save_json(s, defaultSettings)
+
+    repos = {}
+    r = "data/github/repos.json"
+    if not dataIO.is_valid_json(r):
+        print("valid github/repos.json not detected, creating...")
+        dataIO.save_json(r, repos)
+
 def setup(bot):
+    check_folder()
+    check_file()
     bot.add_cog(GitHub(bot))
