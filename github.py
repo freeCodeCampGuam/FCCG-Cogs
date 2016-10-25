@@ -1,4 +1,3 @@
-"""Accesses GitHub."""
 
 # To-do list:
 # timed digests
@@ -10,7 +9,8 @@ import asyncio
 import discord
 from discord.ext import commands
 
-class GitHub(object):
+class GitHub:
+    """Accesses GitHub."""
 
     def __init__(self, bot):
         self.bot = bot
