@@ -1,4 +1,3 @@
-"""Accesses GitHub."""
 
 # To-do list:
 # timed digests
@@ -11,7 +10,8 @@ import discord
 from discord.ext import commands
 from redcogs.utils import dataIO
 
-class Github(object):
+class GitHub:
+    """Accesses GitHub."""
 
     def __init__(self, bot):
         self.bot = bot
