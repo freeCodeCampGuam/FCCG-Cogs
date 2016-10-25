@@ -8,7 +8,7 @@ import os, os.path
 import aiohttp, asyncio
 import discord
 from discord.ext import commands
-from redcogs.utils import dataIO
+from cogs.utils import dataIO
 
 class GitHub:
     """Accesses GitHub."""
