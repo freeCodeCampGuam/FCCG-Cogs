@@ -18,10 +18,6 @@ class GitHub(object):
         self.repos = []
         self.bot.loop.create_task(self.check_for_updates())
 
-    async def create_session(self):
-        """Creates aiohttp ClientSession to be used in retrieving data from APIs."""
-        return await aiohttp.ClientSession()
-
     async def check_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         while not self.bot.is_closed:
@@ -32,16 +28,15 @@ class GitHub(object):
     async def addrepo(self, owner: str, repo: str):
         """Adds a repository to the set of repos to be checked regularly, first checking if it is a valid/accessible repo."""
         site = "https://api.github.com/repos/{}/{}".format(owner,repo)
-        # creates a session for each request, should probably change
-        async with aiohttp.ClientSession() as session:
-            async with session.get(site) as response:
-                if response.status == 200:
-                    await self.bot.say("Repository verified. Adding to list of sources.")
-                    self.repos.append("/".join((owner, repo.name)))
-                elif response.status == 404:
-                    await self.bot.say("Repository not found.")
-                else:
-                    await self.bot.say("An unknown error occurred. Repository not verified.")
+            async with aiohttp.get(site) as response:
+                status = response.status
+            if status == 200:
+                await self.bot.say("Repository verified. Adding to list of sources.")
+                self.repos.append("/".join((owner, repo.name)))
+            elif status == 404:
+                await self.bot.say("Repository not found.")
+            else:
+                await self.bot.say("An unknown error occurred. Repository not verified.")
 
     @commands.command()
     async def lsrepo(self):
