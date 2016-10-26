@@ -16,6 +16,8 @@ class GitHub:
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json("data/github/settings.json")
+        self.repoPath = "data/github/repos.json"
+        self.repos = dataIO.load_json(self.repoPath)
         self.bot.loop.create_task(self.check_for_updates())
 
     async def check_for_updates(self):
@@ -32,7 +34,8 @@ class GitHub:
             status = response.status
             if status == 200:
                 await self.bot.say("Repository verified. Adding to list of sources.")
-                self.repos.append("/".join((owner, repo.name)))
+                self.repos[repo] = "/".join(owner, repo)
+                dataIO.save_json(self.repoPath, self.repos)
             elif status == 404:
                 await self.bot.say("Repository not found.")
             else:
