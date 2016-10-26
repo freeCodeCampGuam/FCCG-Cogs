@@ -23,9 +23,20 @@ class GitHub:
         self._log_in()
 
     async def _log_in(self):
-        if self.settings["validated"] is False:
+        """Attempts to log in to GitHub through the API with the given credentials."""
+        usr = self.settings["github_username"]
+        token = self.settings["personal_access_token"]
+        if self.settings["validated"] is not True:
             try:
-                # attempt login here
+                r = await aiohttp.request("GET","https://api.github.com/user",
+                                          auth=aiohttp.BasicAuth(usr,token))
+                data = await r.json()
+            except Exception as e:
+                print("GitHub login as {} failed.".format(usr))
+                print("{}: {}".format(e.__name__,e))
+                self.settings["validated"] = False
+            if r.status == 200:
+                print("Login succeeded as {}!".format(usr))
 
     async def _check_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
@@ -47,7 +58,8 @@ class GitHub:
 
     @commands.command(name="addrepo")
     async def _add_repos(self, owner: str, repo: str):
-        """Adds a repository to the set of repos to be checked regularly, first checking if it is a valid/accessible repo."""
+        """Adds a repository to the set of repos to be checked regularly.
+        First checks if it is a valid/accessible repo."""
         site = "https://api.github.com/repos/{}/{}".format(owner,repo)
         async with aiohttp.get(site) as response:
             status = response.status
@@ -88,8 +100,8 @@ def check_folder():
 
 def check_file():
     defaultSettings = { "interval" : 60,
-                        "git_user" : "",
-                        "validated" : True,
+                        "github_username" : "",
+                        "validated" : None,
                         "personal_access_token" : ""}
 
     s = "data/github/settings.json"
