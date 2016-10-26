@@ -1,4 +1,3 @@
-
 # To-do list:
 # timed digests
 # listing/sorting/linking issues/pull requests
@@ -20,9 +19,15 @@ class GitHub:
         self.settingPath = "data/github/settings.json"
         self.repos = dataIO.load_json(self.repoPath)
         self.settings = dataIO.load_json(self.settingPath)
-        self.bot.loop.create_task(self.check_for_updates())
+        self.bot.loop.create_task(self._check_for_updates())
+        self._log_in()
 
-    async def check_for_updates(self):
+    async def _log_in(self):
+        if self.settings["validated"] is False:
+            try:
+                # attempt login here
+
+    async def _check_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         await self.bot.wait_until_ready()
         session = aiohttp.ClientSession()
@@ -82,7 +87,10 @@ def check_folder():
         os.makedirs("data/github")
 
 def check_file():
-    defaultSettings = { "interval" : 60 }
+    defaultSettings = { "interval" : 60,
+                        "git_user" : "",
+                        "validated" : True,
+                        "personal_access_token" : ""}
 
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
