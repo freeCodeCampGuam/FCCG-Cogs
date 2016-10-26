@@ -7,46 +7,74 @@
 import os, os.path
 import aiohttp, asyncio
 import discord
+from copy import copy
 from discord.ext import commands
-from cogs.utils import dataIO
+from cogs.utils.dataIO import dataIO
 
 class GitHub:
     """Accesses GitHub."""
 
     def __init__(self, bot):
         self.bot = bot
-        self.settings = dataIO.load_json("data/github/settings.json")
         self.repoPath = "data/github/repos.json"
+        self.settingPath = "data/github/settings.json"
         self.repos = dataIO.load_json(self.repoPath)
+        self.settings = dataIO.load_json(self.settingPath)
         self.bot.loop.create_task(self.check_for_updates())
 
     async def check_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
+        await self.bot.wait_until_ready()
+        session = aiohttp.ClientSession()
         while not self.bot.is_closed:
-            print("Beep!") # do checky things here
-            await asyncio.sleep(60) # placeholder
+            for repo in self.repos:
+                print("Beep!") # do checky things here
+            await asyncio.sleep(self.settings["interval"])
 
-    @commands.command()
-    async def addrepo(self, owner: str, repo: str):
+    @commands.command(name="setin")
+    async def _set_interval(self, interval : int):
+        """Sets the interval at which the cog checks for updates, in minutes."""
+        if interval < 5:
+            interval = 5
+        self.settings["interval"] = interval * 60
+        await self.bot.say("Check delay set to {} minutes.".format(interval))
+        dataIO.save_json(self.settingPath, self.settings)
+
+    @commands.command(name="addrepo")
+    async def _add_repos(self, owner: str, repo: str):
         """Adds a repository to the set of repos to be checked regularly, first checking if it is a valid/accessible repo."""
         site = "https://api.github.com/repos/{}/{}".format(owner,repo)
         async with aiohttp.get(site) as response:
             status = response.status
-            if status == 200:
-                await self.bot.say("Repository verified. Adding to list of sources.")
-                self.repos[repo] = "/".join(owner, repo)
-                dataIO.save_json(self.repoPath, self.repos)
-            elif status == 404:
-                await self.bot.say("Repository not found.")
-            else:
-                await self.bot.say("An unknown error occurred. Repository not verified.")
+        if status == 200:
+            await self.bot.say("Repository verified. Adding to list of sources.")
+            self.repos[repo] = "/".join((owner, repo))
+            dataIO.save_json(self.repoPath, self.repos)
+        elif status == 404:
+            await self.bot.say("Repository not found.")
+        else:
+            await self.bot.say("An unknown error occurred. Repository not verified.")
 
-    @commands.command()
-    async def lsrepo(self):
+    @commands.command(name="lsrepo")
+    async def _list_repos(self):
         """Lists currently added repos."""
-        r = "\n".join(["https://github.com/{}".format(s) for s in self.repos])
+        r = "\n".join(["https://github.com/{}".format(s) for s in self.repos.values()])
         # turns list of repos into GitHub links
         await self.bot.say("Currently added repositories: ```{}```".format(r))
+
+    @commands.command(name="delrepo")
+    async def _delete_repo(self, owner : str, repo : str):
+        """Removes repository from set of repos to be checked regularly."""
+        path = "/".join((owner,repo))
+        repos = self.repos.values()
+        go = False
+        for r in repos:
+            if path == r:
+                go = True
+        if go:
+            await self.bot.say("Removing repo {} from list.".format(repo))
+            self.repos.pop(repo, None)
+            dataIO.save_json(self.repoPath,self.repos)
 
 def check_folder():
     if not os.path.exists("data/github"):
@@ -54,7 +82,7 @@ def check_folder():
         os.makedirs("data/github")
 
 def check_file():
-    defaultSettings = {}
+    defaultSettings = { "interval" : 60 }
 
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
