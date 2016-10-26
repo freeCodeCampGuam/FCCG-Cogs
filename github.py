@@ -28,8 +28,8 @@ class GitHub:
     async def addrepo(self, owner: str, repo: str):
         """Adds a repository to the set of repos to be checked regularly, first checking if it is a valid/accessible repo."""
         site = "https://api.github.com/repos/{}/{}".format(owner,repo)
-            async with aiohttp.get(site) as response:
-                status = response.status
+        async with aiohttp.get(site) as response:
+            status = response.status
             if status == 200:
                 await self.bot.say("Repository verified. Adding to list of sources.")
                 self.repos.append("/".join((owner, repo.name)))
@@ -50,7 +50,7 @@ def check_folder():
         print("data/github not detected, creating folder...")
         os.makedirs("data/github")
 
-def check_files():
+def check_file():
     defaultSettings = {}
 
     s = "data/github/settings.json"
