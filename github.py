@@ -3,9 +3,11 @@
 # listing/sorting/linking issues/pull requests
 # issue submission directly from Discord
 
+
 import os, os.path
 import aiohttp, asyncio
 import discord
+from datetime import datetime, timedelta
 from copy import copy
 from discord.ext import commands
 from cogs.utils.dataIO import dataIO
@@ -19,33 +21,66 @@ class GitHub:
         self.settingPath = "data/github/settings.json"
         self.repos = dataIO.load_json(self.repoPath)
         self.settings = dataIO.load_json(self.settingPath)
-        self.bot.loop.create_task(self._check_for_updates())
-        self._log_in()
+        self.bot.loop.create_task(self._log_in())
+        self.bot.loop.create_task(self._wait_for_updates())
 
     async def _log_in(self):
         """Attempts to log in to GitHub through the API with the given credentials."""
         usr = self.settings["github_username"]
         token = self.settings["personal_access_token"]
         if self.settings["validated"] is not True:
-            try:
-                r = await aiohttp.request("GET","https://api.github.com/user",
-                                          auth=aiohttp.BasicAuth(usr,token))
-                data = await r.json()
-            except Exception as e:
-                print("GitHub login as {} failed.".format(usr))
-                print("{}: {}".format(e.__name__,e))
-                self.settings["validated"] = False
+            print("Please enter GitHub username.")
+            usr = input()
+            self.settings["github_username"] = usr
+            print("Please enter GitHub Personal Access Token.")
+            token = input()
+            self.settings["personal_access_token"] = token
+        try:
+            r = await aiohttp.request("GET","https://api.github.com/user",auth=aiohttp.BasicAuth(usr,token))
+            data = await r.json()
+        except Exception as e:
+            print("GitHub login as {} failed.".format(usr))
+            print("{}: {}".format(e.__name__,e))
+            self.settings["validated"] = False
+        else:
             if r.status == 200:
                 print("Login succeeded as {}!".format(usr))
+                self.settings["validated"] = True
+        dataIO.save_json(self.settingPath, self.settings)
 
-    async def _check_for_updates(self):
+    async def _create_digest(self, channel=None):
+        """Grabs the most recent happenings for each repo, prints nicely."""
+        if channel is None:
+            channel = discord.User(self.bot.owner)
+        # all updates since "last update"
+        d = datetime.now() - timedelta(minutes=self.settings["interval"])
+        datestring = d.isoformat()
+        params = {"since": datestring}
+        for repo in self.repos.values():
+            print("Checking repo {}...".format(repo))
+            site = "https://api.github.com/repos/{}/issues".format(repo, params=params)
+            async with aiohttp.get(site.format(repo)) as response:
+                status = response.status
+                reason = response.reason
+                data = await response.json()
+            await self.bot.say("```{}: {}```".format(status, reason))
+            if status == 200:
+                for issue in data:
+                    await self.bot.say(issue[title], channel)
+                    await self.bot.say(issue[body], channel)
+
+    async def _wait_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         await self.bot.wait_until_ready()
-        session = aiohttp.ClientSession()
         while not self.bot.is_closed:
-            for repo in self.repos:
-                print("Beep!") # do checky things here
+            print("Scheduled digest firing!")
+            await self._create_digest()
             await asyncio.sleep(self.settings["interval"])
+
+    @commands.command(name="gitupdate", pass_context=True)
+    async def _force_grab_updates(self, ctx):
+        """Produces a digest on command."""
+        await self._create_digest(ctx.message.channel)
 
     @commands.command(name="setin")
     async def _set_interval(self, interval : int):
@@ -102,7 +137,8 @@ def check_file():
     defaultSettings = { "interval" : 60,
                         "github_username" : "",
                         "validated" : None,
-                        "personal_access_token" : ""}
+                        "personal_access_token" : "",
+                        "designated_channel" : "owner" }
 
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
