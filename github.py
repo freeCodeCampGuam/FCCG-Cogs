@@ -24,6 +24,15 @@ class GitHub:
         self.bot.loop.create_task(self._log_in())
         self.bot.loop.create_task(self._wait_for_updates())
 
+    def _format_issue(self, issue, repo):
+        """Formats a GitHub issue nicely so it can be printed in Discord. issue is the dict returned by a GitHub
+        API request for a given Issue."""
+        string = "New issue on `{}`: **{}**\n```{}```"
+        if len(issue["body"]) > 100: # max default body length 100 characters, create setting later
+            body = issue["body"][:101]
+        fullstring = string.format(repo, issue["title"], body)
+        return fullstring
+
     async def _log_in(self):
         """Attempts to log in to GitHub through the API with the given credentials."""
         usr = self.settings["github_username"]
@@ -51,7 +60,7 @@ class GitHub:
     async def _create_digest(self, channel=None):
         """Grabs the most recent happenings for each repo, prints nicely."""
         if channel is None:
-            channel = discord.User(self.bot.owner)
+            channel = discord.User(id=self.bot.owner)
         # all updates since "last update"
         d = datetime.now() - timedelta(minutes=self.settings["interval"])
         datestring = d.isoformat()
@@ -63,11 +72,11 @@ class GitHub:
                 status = response.status
                 reason = response.reason
                 data = await response.json()
-            await self.bot.say("```{}: {}```".format(status, reason))
+            ret = "```{}: {}```".format(status, reason)
+            await self.bot.say(ret)
             if status == 200:
                 for issue in data:
-                    await self.bot.say(issue[title], channel)
-                    await self.bot.say(issue[body], channel)
+                    await self.bot.say(self._format_issue(issue, repo))
 
     async def _wait_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
