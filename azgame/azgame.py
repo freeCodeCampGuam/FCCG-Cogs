@@ -104,7 +104,6 @@ def check_file():
         print("valid azgame/settings.json not detected, creating default...")
         dataIO.save_json(path, defaults)
 
-
 def setup(bot):
     check_folder()
     check_file()
