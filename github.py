@@ -21,22 +21,26 @@ class GitHub:
         self.settingPath = "data/github/settings.json"
         self.repos = dataIO.load_json(self.repoPath)
         self.settings = dataIO.load_json(self.settingPath)
+        # async functions can't be called without being in another async function
+        # so _log_in and _wait_for_issue are added to the bot's event loop
         self.bot.loop.create_task(self._log_in())
         self.bot.loop.create_task(self._wait_for_updates())
 
     def _format_issue(self, issue, repo):
         """Formats a GitHub issue nicely so it can be printed in Discord. issue is the dict returned by a GitHub
         API request for a given Issue."""
-        string = "New issue on `{}`: **{}**\n```{}```"
-        if len(issue["body"]) > 100: # max default body length 100 characters, create setting later
-            body = issue["body"][:101]
-        fullstring = string.format(repo, issue["title"], body)
+        string = "New issue on `{}` by {}: **{}**\n{}"
+        # ex "New issue on centipeda/gh-cog-test-repo by centipeda: **title** link"
+        fullstring = string.format(repo, issue["user"]["login"], issue["title"], issue["html_url"])
         return fullstring
 
     async def _log_in(self):
         """Attempts to log in to GitHub through the API with the given credentials."""
+        # tries to use what's in the settings
         usr = self.settings["github_username"]
         token = self.settings["personal_access_token"]
+        # but if hasn't been validated yet, ask for credentials anyway
+        # through console/terminal
         if self.settings["validated"] is not True:
             print("Please enter GitHub username.")
             usr = input()
@@ -45,16 +49,23 @@ class GitHub:
             token = input()
             self.settings["personal_access_token"] = token
         try:
+            # basic authentication request
             r = await aiohttp.request("GET","https://api.github.com/user",auth=aiohttp.BasicAuth(usr,token))
             data = await r.json()
         except Exception as e:
+            # if exception happened during authentication request, assume validation failed
             print("GitHub login as {} failed.".format(usr))
             print("{}: {}".format(e.__name__,e))
             self.settings["validated"] = False
         else:
-            if r.status == 200:
+            if r.status == 200: # OK
                 print("Login succeeded as {}!".format(usr))
+                # setting validated to True bypasses asking for credentials on
+                # cog startup
                 self.settings["validated"] = True
+            else:
+                self.settings["validated"] = False
+        # always save
         dataIO.save_json(self.settingPath, self.settings)
 
     async def _create_digest(self, channel=None):
@@ -62,8 +73,13 @@ class GitHub:
         if channel is None:
             channel = discord.User(id=self.bot.owner)
         # all updates since "last update"
-        d = datetime.now() - timedelta(minutes=self.settings["interval"])
+        # subtracting these datetime objects should give current time "minus" the interval
+        # that is, the time interval seconds ago
+        d = datetime.now() - timedelta(seconds=self.settings["interval"])
+        # GitHub API takes ISO 8601 format for dates/times
         datestring = d.isoformat()
+        # setting the 'since' parameter in a request for issues
+        # only retrieves issues after a certain time
         params = {"since": datestring}
         for repo in self.repos.values():
             print("Checking repo {}...".format(repo))
@@ -72,6 +88,7 @@ class GitHub:
                 status = response.status
                 reason = response.reason
                 data = await response.json()
+            # display response code and reason, for debugging
             ret = "```{}: {}```".format(status, reason)
             await self.bot.say(ret)
             if status == 200:
@@ -81,7 +98,9 @@ class GitHub:
     async def _wait_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         await self.bot.wait_until_ready()
+        # loops until bot stops functioning
         while not self.bot.is_closed:
+            # so you can tell the difference between manual updates and scheduled ones
             print("Scheduled digest firing!")
             await self._create_digest()
             await asyncio.sleep(self.settings["interval"])
@@ -94,8 +113,9 @@ class GitHub:
     @commands.command(name="setin")
     async def _set_interval(self, interval : int):
         """Sets the interval at which the cog checks for updates, in minutes."""
-        if interval < 5:
-            interval = 5
+        # minimum digest interval is 60 minutes, subject to change
+        if interval < 60:
+            interval = 60
         self.settings["interval"] = interval * 60
         await self.bot.say("Check delay set to {} minutes.".format(interval))
         dataIO.save_json(self.settingPath, self.settings)
@@ -107,20 +127,23 @@ class GitHub:
         site = "https://api.github.com/repos/{}/{}".format(owner,repo)
         async with aiohttp.get(site) as response:
             status = response.status
-        if status == 200:
+        # if retrieval was success, assume repo is valid
+        if status == 200: # OK
             await self.bot.say("Repository verified. Adding to list of sources.")
             self.repos[repo] = "/".join((owner, repo))
             dataIO.save_json(self.repoPath, self.repos)
-        elif status == 404:
+        # if repo nonexistent, say so
+        elif status == 404: # Not Found
             await self.bot.say("Repository not found.")
+        # for anything else that might happen
         else:
             await self.bot.say("An unknown error occurred. Repository not verified.")
 
     @commands.command(name="lsrepo")
     async def _list_repos(self):
         """Lists currently added repos."""
-        r = "\n".join(["https://github.com/{}".format(s) for s in self.repos.values()])
         # turns list of repos into GitHub links
+        r = "\n".join(["https://github.com/{}".format(s) for s in self.repos.values()])
         await self.bot.say("Currently added repositories: ```{}```".format(r))
 
     @commands.command(name="delrepo")
@@ -128,11 +151,19 @@ class GitHub:
         """Removes repository from set of repos to be checked regularly."""
         path = "/".join((owner,repo))
         repos = self.repos.values()
-        go = False
+        # since you can't delete a value in a dict when you're looping over it
+        # and you can't copy.copy dict values (even if they're primitives)
+        # searches through added repos for a match, and binds it with r
+        # then breaks from the loop
+        toPop = None
         for r in repos:
             if path == r:
-                go = True
-        if go:
+                toPop = r
+                break
+        # if r hasn't been marked, the repo hasn't been added
+        if toPop is None:
+            await self.bot.reply("Repository not found!")
+        else:
             await self.bot.say("Removing repo {} from list.".format(repo))
             self.repos.pop(repo, None)
             dataIO.save_json(self.repoPath,self.repos)
