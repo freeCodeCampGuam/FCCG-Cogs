@@ -51,7 +51,6 @@ class GitHub:
         try:
             # basic authentication request
             r = await aiohttp.request("GET","https://api.github.com/user",auth=aiohttp.BasicAuth(usr,token))
-            data = await r.json()
         except Exception as e:
             # if exception happened during authentication request, assume validation failed
             print("GitHub login as {} failed.".format(usr))
@@ -75,16 +74,17 @@ class GitHub:
         # all updates since "last update"
         # subtracting these datetime objects should give current time "minus" the interval
         # that is, the time interval seconds ago
-        d = datetime.now() - timedelta(seconds=self.settings["interval"])
+        d = datetime.utcnow() - timedelta(seconds=self.settings["interval"])
         # GitHub API takes ISO 8601 format for dates/times
-        datestring = d.isoformat()
+        # so we need just a little bit more formatting
+        datestring = d.isoformat()[:-7] + "Z"
         # setting the 'since' parameter in a request for issues
         # only retrieves issues after a certain time
-        params = {"since": datestring}
+        parameters= {"since": datestring}
         for repo in self.repos.values():
             print("Checking repo {}...".format(repo))
-            site = "https://api.github.com/repos/{}/issues".format(repo, params=params)
-            async with aiohttp.get(site.format(repo)) as response:
+            site = "https://api.github.com/repos/{}/issues".format(repo)
+            async with aiohttp.get(site.format(repo), params=parameters) as response:
                 status = response.status
                 reason = response.reason
                 data = await response.json()
