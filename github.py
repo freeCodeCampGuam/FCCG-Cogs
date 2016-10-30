@@ -87,29 +87,38 @@ class GitHub:
                 data = await response.json()
             # display response code and reason, for debugging
             ret = "```{}: {}```".format(status, reason)
-            await self.bot.say(ret)
+            await self.bot.send_message(ret, channel)
             if status == 200:
-                for issue in data:
-                    await self.bot.say(self._format_issue(issue, repo))
+                if self.settings["notification_method"][0] == "message":
+                    dest = self.settings["notification_method"][1]
+                    for issue in data:
+                        await self.bot.send_message(self._format_issue(issue, repo), dest)
+                elif self.settings["notification_method"][0] == "webhook":
+                    await self._fire_hooks()
 
     async def _wait_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         await self.bot.wait_until_ready()
         # loops until bot stops functioning
         while not self.bot.is_closed:
-            # so you can tell the difference between manual updates and scheduled ones
+            # print so you can tell the difference between manual updates and scheduled ones
             print("Scheduled digest firing!")
             await self._create_digest()
             await asyncio.sleep(self.settings["interval"])
 
-    @commands.group(name="notifymethod")
-    async def _set_notification_method(self, method : str):
+    @commands.group(pass_context = True, name="notifymethod")
+    async def _set_notification_method(self, ctx):
         """Changes whether digests are created using normal messages or webhooks."""
 
     @_set_notification_method.command()
-    async def message(channel : str):
+    async def message(channel_name : str):
         """Changes cog to send digests to specified channel."""
-        self.settings["notification_method"] = ["message", channel]
+        # check if channel is on server where command is given
+        if not channel_name in [c.name for c in ctx.message.server.channels]:
+            await self.bot.say("Channel `{}` not found on this server!".format(channel_name))
+            return
+        serverId = ctx.message.server.id
+        self.settings["notification_methods"][server] = ("message", chanId)
         dataIO.save_json(self.settingPath, self.settings)
         await self.bot.say("Set notification method to message #{}.".format(channel))
 
@@ -122,10 +131,15 @@ class GitHub:
             hookId = hook_url.split("/")[5]
         async with aiohttp.get(beginUrl + hookId) as response:
             status = response.status
+            reason = response.reason
         if status == 200: # OK
             await self.bot.say("Webhook validated.")
-            self.settings["notification_method"] = ["webhook", hook_url]
+            serverId = ctx.message.server.id
+            self.settings["notification_methods"][serverId] = ("webhook", hook_url)
             dataIO.save_json(self.settingPath, self.settings)
+        else:
+            script = "Webhook validation failed: {}: {}".format(status, reason)
+            await self.bot.say(script)
 
     @commands.command(name="gitupdate", pass_context=True)
     async def _force_grab_updates(self, ctx):
@@ -168,7 +182,7 @@ class GitHub:
         """Lists currently added repos."""
         # turns list of repos into GitHub links
         r = "\n".join(["https://github.com/{}".format(s) for s in self.settings["repos"]])
-        await self.bot.say("Currently added repositories: ```{}```".format(r))
+        await self.bot.say("```Currently added repositories:\n{}```".format(r))
 
     @commands.command(name="delrepo")
     async def _delete_repo(self, repostr : str):
@@ -200,7 +214,7 @@ def check_file():
                         "github_username" : "",
                         "validated" : None,
                         "personal_access_token" : "",
-                        "notification_method" : {"message" : "owner"},
+                        "notification_methods" : {},
                         "repos" : []
                         }
     s = "data/github/settings.json"
