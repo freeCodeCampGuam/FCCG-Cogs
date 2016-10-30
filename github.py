@@ -64,10 +64,8 @@ class GitHub:
         # always save
         dataIO.save_json(self.settingPath, self.settings)
 
-    async def _create_digest(self, channel=None):
+    async def _create_digest(self, server):
         """Grabs the most recent happenings for each repo, prints nicely."""
-        if channel is None:
-            channel = discord.User(id=self.bot.owner)
         # all updates since "last update"
         # subtracting these datetime objects should give current time "minus" the interval
         # that is, the time interval seconds ago
@@ -89,22 +87,30 @@ class GitHub:
             ret = "```{}: {}```".format(status, reason)
             await self.bot.send_message(ret, channel)
             if status == 200:
-                if self.settings["notification_method"][0] == "message":
-                    dest = self.settings["notification_method"][1]
+                if self.settings["servers"][server.id]["notification_method"][0] == "message":
+                    channelId = self.settings["servers"][server.id]["notification_method"][1]
+                    dest = discord.Channel(id=channelId)
                     for issue in data:
                         await self.bot.send_message(self._format_issue(issue, repo), dest)
                 elif self.settings["notification_method"][0] == "webhook":
-                    await self._fire_hooks()
+                    await self._fire_hooks(server)
 
     async def _wait_for_updates(self):
         """Checks for updates from assigned GitHub repos at given interval."""
         await self.bot.wait_until_ready()
         # loops until bot stops functioning
+        referenceCount = 0
         while not self.bot.is_closed:
             # print so you can tell the difference between manual updates and scheduled ones
-            print("Scheduled digest firing!")
-            await self._create_digest()
-            await asyncio.sleep(self.settings["interval"])
+            print("Scheduled digests firing!")
+            for server in self.bot.servers:
+                # checks if current second count since startup is evenly divisible
+                # by each server's set interval, effectively firing digests
+                # at each server's interval
+                if referenceCount % self.settings[server.id]["interval"] == 0:
+                    await self._create_digest(server)
+                    await asyncio.sleep(1)
+                    referenceCount += 1
 
     @commands.group(pass_context = True, name="notifymethod")
     async def _set_notification_method(self, ctx):
@@ -118,7 +124,7 @@ class GitHub:
             await self.bot.say("Channel `{}` not found on this server!".format(channel_name))
             return
         serverId = ctx.message.server.id
-        self.settings["notification_methods"][server] = ("message", chanId)
+        self.settings["servers"][serverId]["notification_method"] = ("message", chanId)
         dataIO.save_json(self.settingPath, self.settings)
         await self.bot.say("Set notification method to message #{}.".format(channel))
 
@@ -135,7 +141,7 @@ class GitHub:
         if status == 200: # OK
             await self.bot.say("Webhook validated.")
             serverId = ctx.message.server.id
-            self.settings["notification_methods"][serverId] = ("webhook", hook_url)
+            self.settings["servers"][serverId]["notification_methods"] = ("webhook", hook_url)
             dataIO.save_json(self.settingPath, self.settings)
         else:
             script = "Webhook validation failed: {}: {}".format(status, reason)
@@ -146,18 +152,18 @@ class GitHub:
         """Produces a digest on command."""
         await self._create_digest(ctx.message.channel)
 
-    @commands.command(name="setin")
-    async def _set_interval(self, interval : int):
+    @commands.command(pass_context=True, name="setin")
+    async def _set_interval(self, ctx, interval : int):
         """Sets the interval at which the cog checks for updates, in minutes."""
         # minimum digest interval is 60 minutes, subject to change
         if interval < 60:
             interval = 60
-        self.settings["interval"] = interval * 60
+        self.settings["servers"][ctx.message.server.id]["interval"] = interval * 60
         await self.bot.say("Check delay set to {} minutes.".format(interval))
         dataIO.save_json(self.settingPath, self.settings)
 
-    @commands.command(name="addrepo")
-    async def _add_repos(self, repostr : str):
+    @commands.command(pass_context = True, name="addrepo")
+    async def _add_repo(self, ctx, repostr : str):
         """Adds a repository to the set of repos to be checked regularly.
         First checks if it is a valid/accessible repo."""
         if "/" in repostr:
@@ -168,7 +174,8 @@ class GitHub:
         # if retrieval was success, assume repo is valid
         if status == 200: # OK
             await self.bot.say("Repository verified. Adding to list of sources.")
-            self.settings["repos"].append(repostr)
+            serverId = ctx.message.server.id
+            self.settings["servers"][serverId]["repos"].append(repostr)
             dataIO.save_json(self.settingPath, self.settings)
         # if repo nonexistent, say so
         elif status == 404: # Not Found
@@ -177,14 +184,15 @@ class GitHub:
         else:
             await self.bot.say("An unknown error occurred. Repository not verified.")
 
-    @commands.command(name="lsrepo")
-    async def _list_repos(self):
+    @commands.command(pass_context = True, name="lsrepo")
+    async def _list_repos(self, ctx):
         """Lists currently added repos."""
         # turns list of repos into GitHub links
-        r = "\n".join(["https://github.com/{}".format(s) for s in self.settings["repos"]])
+        repos = self.settings["servers"][ctx.message.server.id]["repos"]
+        r = "\n".join(["https://github.com/{}".format(s) for s in repos])
         await self.bot.say("```Currently added repositories:\n{}```".format(r))
 
-    @commands.command(name="delrepo")
+    @commands.command(pass_context = True, name="delrepo")
     async def _delete_repo(self, repostr : str):
         """Removes repository from set of repos to be checked regularly."""
         repos = self.settings["repos"]
@@ -201,7 +209,7 @@ class GitHub:
             await self.bot.reply("Repository not found!")
         else:
             await self.bot.say("Removing repo `{}` from list.".format(repostr))
-            self.settings["repos"].pop(r)
+            self.settings["servers"][ctx.message.server.id]["repos"].pop(r)
             dataIO.save_json(self.settingPath, self.settings)
 
 def check_folder():
@@ -214,8 +222,7 @@ def check_file():
                         "github_username" : "",
                         "validated" : None,
                         "personal_access_token" : "",
-                        "notification_methods" : {},
-                        "repos" : []
+                        "servers" : {}
                         }
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
