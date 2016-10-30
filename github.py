@@ -3,7 +3,6 @@
 # listing/sorting/linking issues/pull requests
 # issue submission directly from Discord
 
-
 import os, os.path
 import aiohttp, asyncio
 import discord
@@ -105,6 +104,10 @@ class GitHub:
             await self._create_digest()
             await asyncio.sleep(self.settings["interval"])
 
+    @commands.command(name="notifymethod")
+    async def _set_notification_method(self, owner : str, repo : str, method : str):
+    """Changes whether digests are created using normal messages or digests."""
+    
     @commands.command(name="gitupdate", pass_context=True)
     async def _force_grab_updates(self, ctx):
         """Produces a digest on command."""
