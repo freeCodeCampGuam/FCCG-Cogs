@@ -102,10 +102,30 @@ class GitHub:
             await self._create_digest()
             await asyncio.sleep(self.settings["interval"])
 
-    @commands.command(name="notifymethod")
-    async def _set_notification_method(self, owner : str, repo : str, method : str):
-        """Changes whether digests are created using normal messages or digests."""
-        pass
+    @commands.group(name="notifymethod")
+    async def _set_notification_method(self, method : str):
+        """Changes whether digests are created using normal messages or webhooks."""
+
+    @_set_notification_method.command()
+    async def message(channel : str):
+        """Changes cog to send digests to specified channel."""
+        self.settings["notification_method"] = ["message", channel]
+        dataIO.save_json(self.settingPath, self.settings)
+        await self.bot.say("Set notification method to message #{}.".format(channel))
+
+    @_set_notification_method.command()
+    async def webhook(hook_url : str):
+        """Changes cog to send digests utilizing specified webhook."""
+        beginUrl = "https://canary.discordapp.com/api/webhooks/"
+        # pull webhook id from URL
+        if hook_url.startswith(beginUrl):
+            hookId = hook_url.split("/")[5]
+        async with aiohttp.get(beginUrl + hookId) as response:
+            status = response.status
+        if status == 200: # OK
+            await self.bot.say("Webhook validated.")
+            self.settings["notification_method"] = ["webhook", hook_url]
+            dataIO.save_json(self.settingPath, self.settings)
 
     @commands.command(name="gitupdate", pass_context=True)
     async def _force_grab_updates(self, ctx):
@@ -154,9 +174,8 @@ class GitHub:
     async def _delete_repo(self, repostr : str):
         """Removes repository from set of repos to be checked regularly."""
         repos = self.settings["repos"]
-        # since you can't delete a value in a dict when you're looping over it
-        # and you can't copy.copy dict values (even if they're primitives)
-        # searches through added repos for a match, and binds it with r
+        # since you shouldn't delete a value in something you're iterating over
+        # searches through added repos for a match, and binds it with `r`
         # then breaks from the loop
         toPop = None
         for r in repos:
@@ -167,7 +186,7 @@ class GitHub:
         if toPop is None:
             await self.bot.reply("Repository not found!")
         else:
-            await self.bot.say("Removing repo {} from list.".format(repo))
+            await self.bot.say("Removing repo `{}` from list.".format(repostr))
             self.settings["repos"].pop(r)
             dataIO.save_json(self.settingPath, self.settings)
 
@@ -181,9 +200,9 @@ def check_file():
                         "github_username" : "",
                         "validated" : None,
                         "personal_access_token" : "",
-                        "designated_channel" : "owner",
-                        "repos" : [] }
-
+                        "notification_method" : {"message" : "owner"},
+                        "repos" : []
+                        }
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
         print("valid github/settings.json not detected, creating...")
