@@ -16,9 +16,7 @@ class GitHub:
 
     def __init__(self, bot):
         self.bot = bot
-        self.repoPath = "data/github/repos.json"
         self.settingPath = "data/github/settings.json"
-        self.repos = dataIO.load_json(self.repoPath)
         self.settings = dataIO.load_json(self.settingPath)
         # async functions can't be called without being in another async function
         # so _log_in and _wait_for_issue are added to the bot's event loop
@@ -80,7 +78,7 @@ class GitHub:
         # setting the 'since' parameter in a request for issues
         # only retrieves issues after a certain time
         parameters= {"since": datestring}
-        for repo in self.repos.values():
+        for repo in self.settings["repos"]:
             print("Checking repo {}...".format(repo))
             site = "https://api.github.com/repos/{}/issues".format(repo)
             async with aiohttp.get(site.format(repo), params=parameters) as response:
@@ -106,8 +104,9 @@ class GitHub:
 
     @commands.command(name="notifymethod")
     async def _set_notification_method(self, owner : str, repo : str, method : str):
-    """Changes whether digests are created using normal messages or digests."""
-    
+        """Changes whether digests are created using normal messages or digests."""
+        pass
+
     @commands.command(name="gitupdate", pass_context=True)
     async def _force_grab_updates(self, ctx):
         """Produces a digest on command."""
@@ -124,17 +123,19 @@ class GitHub:
         dataIO.save_json(self.settingPath, self.settings)
 
     @commands.command(name="addrepo")
-    async def _add_repos(self, owner: str, repo: str):
+    async def _add_repos(self, repostr : str):
         """Adds a repository to the set of repos to be checked regularly.
         First checks if it is a valid/accessible repo."""
+        if "/" in repostr:
+            owner, repo = repostr.split("/")
         site = "https://api.github.com/repos/{}/{}".format(owner,repo)
         async with aiohttp.get(site) as response:
             status = response.status
         # if retrieval was success, assume repo is valid
         if status == 200: # OK
             await self.bot.say("Repository verified. Adding to list of sources.")
-            self.repos[repo] = "/".join((owner, repo))
-            dataIO.save_json(self.repoPath, self.repos)
+            self.settings["repos"].append(repostr)
+            dataIO.save_json(self.settingPath, self.settings)
         # if repo nonexistent, say so
         elif status == 404: # Not Found
             await self.bot.say("Repository not found.")
@@ -146,21 +147,20 @@ class GitHub:
     async def _list_repos(self):
         """Lists currently added repos."""
         # turns list of repos into GitHub links
-        r = "\n".join(["https://github.com/{}".format(s) for s in self.repos.values()])
+        r = "\n".join(["https://github.com/{}".format(s) for s in self.settings["repos"]])
         await self.bot.say("Currently added repositories: ```{}```".format(r))
 
     @commands.command(name="delrepo")
-    async def _delete_repo(self, owner : str, repo : str):
+    async def _delete_repo(self, repostr : str):
         """Removes repository from set of repos to be checked regularly."""
-        path = "/".join((owner,repo))
-        repos = self.repos.values()
+        repos = self.settings["repos"]
         # since you can't delete a value in a dict when you're looping over it
         # and you can't copy.copy dict values (even if they're primitives)
         # searches through added repos for a match, and binds it with r
         # then breaks from the loop
         toPop = None
         for r in repos:
-            if path == r:
+            if repostr == r:
                 toPop = r
                 break
         # if r hasn't been marked, the repo hasn't been added
@@ -168,8 +168,8 @@ class GitHub:
             await self.bot.reply("Repository not found!")
         else:
             await self.bot.say("Removing repo {} from list.".format(repo))
-            self.repos.pop(repo, None)
-            dataIO.save_json(self.repoPath,self.repos)
+            self.settings["repos"].pop(r)
+            dataIO.save_json(self.settingPath, self.settings)
 
 def check_folder():
     if not os.path.exists("data/github"):
@@ -181,18 +181,13 @@ def check_file():
                         "github_username" : "",
                         "validated" : None,
                         "personal_access_token" : "",
-                        "designated_channel" : "owner" }
+                        "designated_channel" : "owner",
+                        "repos" : [] }
 
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
         print("valid github/settings.json not detected, creating...")
         dataIO.save_json(s, defaultSettings)
-
-    repos = {}
-    r = "data/github/repos.json"
-    if not dataIO.is_valid_json(r):
-        print("valid github/repos.json not detected, creating...")
-        dataIO.save_json(r, repos)
 
 def setup(bot):
     check_folder()
