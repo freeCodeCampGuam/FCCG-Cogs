@@ -3,13 +3,16 @@
 # listing/sorting/linking issues/pull requests
 # issue submission directly from Discord
 
-import os, os.path
-import aiohttp, asyncio
+import os
+import os.path
+import aiohttp
+import asyncio
 import discord
 from datetime import datetime, timedelta
 from copy import copy
 from discord.ext import commands
 from cogs.utils.dataIO import dataIO
+
 
 class GitHub:
     """Accesses GitHub."""
@@ -20,6 +23,7 @@ class GitHub:
         self.settings = dataIO.load_json(self.settingPath)
         # async functions can't be called without being in another async function
         # so _log_in and _wait_for_issue are added to the bot's event loop
+        self.bot.loop.create_task(self._update_server_list())
         self.bot.loop.create_task(self._log_in())
         self.bot.loop.create_task(self._wait_for_updates())
 
@@ -27,12 +31,24 @@ class GitHub:
         """Formats a GitHub issue nicely so it can be printed in Discord. issue is the dict returned by a GitHub
         API request for a given Issue."""
         string = "New issue on `{}` by {}: **{}**\n{}"
-        # ex "New issue on centipeda/gh-cog-test-repo by centipeda: **title** link"
         fullstring = string.format(repo, issue["user"]["login"], issue["title"], issue["html_url"])
         return fullstring
 
+    async def _update_server_list(self):
+        """Ensures config file has all servers loaded on startup."""
+        for server in self.bot.servers:
+            if server.id not in self.settings["servers"].keys():
+                print("Added {} to server list.".format(server.name))
+                info = {"repos": [],
+                        "notification_method": tuple(),
+                        "interval": 3600
+                        }
+                self.settings["servers"][server.id] = info
+                dataIO.save_json(self.settingPath, self.settings)
+
     async def _log_in(self):
-        """Attempts to log in to GitHub through the API with the given credentials."""
+        """Attempts to log in to GitHub through the API with the given
+        credentials."""
         # tries to use what's in the settings
         usr = self.settings["github_username"]
         token = self.settings["personal_access_token"]
@@ -51,10 +67,10 @@ class GitHub:
         except Exception as e:
             # if exception happened during authentication request, assume validation failed
             print("GitHub login as {} failed.".format(usr))
-            print("{}: {}".format(e.__name__,e))
+            print("{}: {}".format(e.__name__, e))
             self.settings["validated"] = False
         else:
-            if r.status == 200: # OK
+            if r.status == 200:  # OK
                 print("Login succeeded as {}!".format(usr))
                 # setting validated to True bypasses asking for credentials on
                 # cog startup
@@ -69,14 +85,15 @@ class GitHub:
         # all updates since "last update"
         # subtracting these datetime objects should give current time "minus" the interval
         # that is, the time interval seconds ago
-        d = datetime.utcnow() - timedelta(seconds=self.settings["interval"])
+        seconds = self.settings["servers"][server.id]["interval"]
+        d = datetime.utcnow() - timedelta(seconds=seconds)
         # GitHub API takes ISO 8601 format for dates/times
         # so we need just a little bit more formatting
         datestring = d.isoformat()[:-7] + "Z"
         # setting the 'since' parameter in a request for issues
         # only retrieves issues after a certain time
-        parameters= {"since": datestring}
-        for repo in self.settings["repos"]:
+        parameters = {"since": datestring}
+        for repo in self.settings["servers"][server.id]["repos"]:
             print("Checking repo {}...".format(repo))
             site = "https://api.github.com/repos/{}/issues".format(repo)
             async with aiohttp.get(site.format(repo), params=parameters) as response:
@@ -84,12 +101,12 @@ class GitHub:
                 reason = response.reason
                 data = await response.json()
             # display response code and reason, for debugging
-            ret = "```{}: {}```".format(status, reason)
-            await self.bot.send_message(ret, channel)
+            # ret = "```{}: {}```".format(status, reason)
+            # await self.bot.send_message(ret, channel)
             if status == 200:
                 if self.settings["servers"][server.id]["notification_method"][0] == "message":
                     channelId = self.settings["servers"][server.id]["notification_method"][1]
-                    dest = discord.Channel(id=channelId)
+                    dest = self.bot.get_channel(channelId)
                     for issue in data:
                         await self.bot.send_message(self._format_issue(issue, repo), dest)
                 elif self.settings["notification_method"][0] == "webhook":
@@ -101,35 +118,47 @@ class GitHub:
         # loops until bot stops functioning
         referenceCount = 0
         while not self.bot.is_closed:
-            # print so you can tell the difference between manual updates and scheduled ones
-            print("Scheduled digests firing!")
             for server in self.bot.servers:
-                # checks if current second count since startup is evenly divisible
-                # by each server's set interval, effectively firing digests
-                # at each server's interval
-                if referenceCount % self.settings[server.id]["interval"] == 0:
+                # checks if current second count since startup is evenly
+                # divisible by each server's set interval, effectively firing
+                # digests at each server's interval
+                intrval = self.settings["servers"][server.id]["interval"]
+                if referenceCount % intrval == 0:
+                    # notification when scheduled digests fire
+                    print("Scheduled digests firing!")
                     await self._create_digest(server)
-                    await asyncio.sleep(1)
-                    referenceCount += 1
+            await asyncio.sleep(1)
+            referenceCount += 1
 
-    @commands.group(pass_context = True, name="notifymethod")
+    @commands.group(pass_context=True, name="notifymethod")
     async def _set_notification_method(self, ctx):
-        """Changes whether digests are created using normal messages or webhooks."""
+        """Changes whether digests are created using normal messages
+        or using webhooks."""
 
-    @_set_notification_method.command()
-    async def message(channel_name : str):
+    @_set_notification_method.command(pass_context=True)
+    async def message(self, ctx, channel_name: str):
         """Changes cog to send digests to specified channel."""
         # check if channel is on server where command is given
-        if not channel_name in [c.name for c in ctx.message.server.channels]:
-            await self.bot.say("Channel `{}` not found on this server!".format(channel_name))
+        print([c.name for c in ctx.message.server.channels])
+        for channel in ctx.message.server.channels:
+            if channel.name == channel_name:
+                print("Match!")
+                channelId = channel.id
+                break
+                print("break fail")
+        else:
+            msg = "Channel `{}` not found on this server!".format(channel_name)
+            await self.bot.say(msg)
             return
         serverId = ctx.message.server.id
-        self.settings["servers"][serverId]["notification_method"] = ("message", chanId)
+        st = ("message", channelId)
+        self.settings["servers"][serverId]["notification_method"] = st
         dataIO.save_json(self.settingPath, self.settings)
-        await self.bot.say("Set notification method to message #{}.".format(channel))
+        msg = "Set notification method to message #{}".format(channel)
+        await self.bot.say(msg)
 
-    @_set_notification_method.command()
-    async def webhook(hook_url : str):
+    @_set_notification_method.command(pass_context=True)
+    async def webhook(self, ctx, hook_url: str):
         """Changes cog to send digests utilizing specified webhook."""
         beginUrl = "https://canary.discordapp.com/api/webhooks/"
         # pull webhook id from URL
@@ -138,10 +167,11 @@ class GitHub:
         async with aiohttp.get(beginUrl + hookId) as response:
             status = response.status
             reason = response.reason
-        if status == 200: # OK
+        if status == 200:  # OK
             await self.bot.say("Webhook validated.")
             serverId = ctx.message.server.id
-            self.settings["servers"][serverId]["notification_methods"] = ("webhook", hook_url)
+            st = ("webhook", hook_url)
+            self.settings["servers"][serverId]["notification_methods"] = st
             dataIO.save_json(self.settingPath, self.settings)
         else:
             script = "Webhook validation failed: {}: {}".format(status, reason)
@@ -150,41 +180,44 @@ class GitHub:
     @commands.command(name="gitupdate", pass_context=True)
     async def _force_grab_updates(self, ctx):
         """Produces a digest on command."""
-        await self._create_digest(ctx.message.channel)
+        await self._create_digest(ctx.message.server)
 
     @commands.command(pass_context=True, name="setin")
-    async def _set_interval(self, ctx, interval : int):
-        """Sets the interval at which the cog checks for updates, in minutes."""
+    async def _set_interval(self, ctx, interval: int):
+        """Sets the interval at which the cog checks for updates in minutes."""
         # minimum digest interval is 60 minutes, subject to change
         if interval < 60:
             interval = 60
-        self.settings["servers"][ctx.message.server.id]["interval"] = interval * 60
+        interval *= 60  # in minutes
+        self.settings["servers"][ctx.message.server.id]["interval"] = interval
         await self.bot.say("Check delay set to {} minutes.".format(interval))
         dataIO.save_json(self.settingPath, self.settings)
 
-    @commands.command(pass_context = True, name="addrepo")
-    async def _add_repo(self, ctx, repostr : str):
+    @commands.command(pass_context=True, name="addrepo")
+    async def _add_repo(self, ctx, repostr: str):
         """Adds a repository to the set of repos to be checked regularly.
         First checks if it is a valid/accessible repo."""
         if "/" in repostr:
             owner, repo = repostr.split("/")
-        site = "https://api.github.com/repos/{}/{}".format(owner,repo)
+        site = "https://api.github.com/repos/{}/{}".format(owner, repo)
         async with aiohttp.get(site) as response:
             status = response.status
         # if retrieval was success, assume repo is valid
-        if status == 200: # OK
-            await self.bot.say("Repository verified. Adding to list of sources.")
+        if status == 200:  # OK
+            msg = "Repository verified. Adding to list of sources."
+            await self.bot.say(msg)
             serverId = ctx.message.server.id
             self.settings["servers"][serverId]["repos"].append(repostr)
             dataIO.save_json(self.settingPath, self.settings)
         # if repo nonexistent, say so
-        elif status == 404: # Not Found
+        elif status == 404:  # Not Found
             await self.bot.say("Repository not found.")
         # for anything else that might happen
         else:
-            await self.bot.say("An unknown error occurred. Repository not verified.")
+            msg = "An unkown error occurred. Repository not verified."
+            await self.bot.say(msg)
 
-    @commands.command(pass_context = True, name="lsrepo")
+    @commands.command(pass_context=True, name="lsrepo")
     async def _list_repos(self, ctx):
         """Lists currently added repos."""
         # turns list of repos into GitHub links
@@ -192,8 +225,8 @@ class GitHub:
         r = "\n".join(["https://github.com/{}".format(s) for s in repos])
         await self.bot.say("```Currently added repositories:\n{}```".format(r))
 
-    @commands.command(pass_context = True, name="delrepo")
-    async def _delete_repo(self, repostr : str):
+    @commands.command(pass_context=True, name="delrepo")
+    async def _delete_repo(self, repostr: str):
         """Removes repository from set of repos to be checked regularly."""
         repos = self.settings["repos"]
         # since you shouldn't delete a value in something you're iterating over
@@ -212,22 +245,25 @@ class GitHub:
             self.settings["servers"][ctx.message.server.id]["repos"].pop(r)
             dataIO.save_json(self.settingPath, self.settings)
 
+
 def check_folder():
     if not os.path.exists("data/github"):
         print("data/github not detected, creating folder...")
         os.makedirs("data/github")
 
+
 def check_file():
-    defaultSettings = { "interval" : 60,
-                        "github_username" : "",
-                        "validated" : None,
-                        "personal_access_token" : "",
-                        "servers" : {}
-                        }
+    defaultSettings = {"interval": 60,
+                       "github_username": "",
+                       "validated": None,
+                       "personal_access_token": "",
+                       "servers": {}
+                       }
     s = "data/github/settings.json"
     if not dataIO.is_valid_json(s):
         print("valid github/settings.json not detected, creating...")
         dataIO.save_json(s, defaultSettings)
+
 
 def setup(bot):
     check_folder()
