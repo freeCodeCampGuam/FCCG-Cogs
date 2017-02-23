@@ -107,25 +107,44 @@ class RoleCall:
         except:
             pass
 
-        mcheck = lambda msg: msg.content.lower().startswith(('yes','no','cancel'))
+        mcheck = lambda msg: msg.content.lower().startswith(('yes', 'no', 'cancel'))
 
         tasks = (self.bot.wait_for_message(author=author, timeout=15,
                                            check=mcheck),
                  self.bot.wait_for_reaction(user=author, timeout=15, message=message,
                                             emoji=('✅', '❌') ))
 
-        done, pending = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
-        for p in pending:
-            p.cancel()
+        converters = (lambda r: r.content.lower().startswith('yes'),
+                      lambda r: r.reaction.emoji == '✅')
 
-        try:
-            r = done.pop().result()
-            return r.content.lower().startswith('yes')
-        except:
-            try:
-                return r.reaction.emoji == '✅'
-            except:
-                return False
+        return await wait_for_first_response(tasks, converters)
+
+
+async def wait_for_first_response(tasks, converters):
+    """given a list of unawaited tasks and non-coro result parsers to be called on the results,
+    this function returns the 1st result that is returned and converted
+
+    if it is possible for 2 tasks to complete at the same time,
+    only the 1st result deteremined by asyncio.wait will be returned
+
+    returns None if none successfully complete
+    returns 1st error raised if any occur (probably)
+    """
+    primed = [wait_for_result(t, c) for t, c in zip(tasks, converters)]
+    done, pending = await asyncio.wait(primed, return_when=asyncio.FIRST_COMPLETED)
+    for p in pending:
+        p.cancel()
+
+    try:
+        return done.pop().result()
+    except:
+        return None
+
+
+async def wait_for_result(task, converter):
+    """await the task call and return its results parsed through the converter"""
+    # why did I do this?
+    return converter(await task)
 
 
 def check_folders():
