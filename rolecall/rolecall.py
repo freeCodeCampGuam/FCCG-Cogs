@@ -4,8 +4,11 @@ from discord.ext import commands
 from cogs.utils.dataIO import dataIO
 from cogs.utils import checks
 import asyncio
+import logging
 import os
 from copy import deepcopy
+
+log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
 DEFAULT_SETTINGS = {
