@@ -1,13 +1,10 @@
-import discord
 import red
+import discord
 from discord.ext import commands
 from cogs.utils.dataIO import dataIO
 from cogs.utils import checks
 import asyncio
 import os
-import aiohttp
-from random import randint
-from random import choice as randchoice
 from copy import deepcopy
 
 SETTINGS_PATH = "data/rolecall/settings.json"
@@ -99,7 +96,14 @@ class RoleCall:
         dataIO.save_json(SETTINGS_PATH, self.settings)
         await self.bot.say('Roleboard is now {}'.channel)
 
-    async def prompt(self, author, *args, **kwargs):
+    async def prompt(self, ctx, *args, **kwargs):
+        """prompts author with a message (yes/no)
+        the prompt is sent via bot.say with the additional args,kwargs passed
+
+        returns True/False/None depending on the user's answer
+        """
+        channel = ctx.message.channel
+        author = ctx.message.author
         message = await self.bot.say(*args, **kwargs)
         try:
             await self.bot.add_reaction(message, '✅')
@@ -109,7 +113,7 @@ class RoleCall:
 
         mcheck = lambda msg: msg.content.lower().startswith(('yes', 'no', 'cancel'))
 
-        tasks = (self.bot.wait_for_message(author=author, timeout=15,
+        tasks = (self.bot.wait_for_message(author=author, timeout=15, channel=channel
                                            check=mcheck),
                  self.bot.wait_for_reaction(user=author, timeout=15, message=message,
                                             emoji=('✅', '❌') ))
