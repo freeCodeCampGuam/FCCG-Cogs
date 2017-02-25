@@ -93,7 +93,7 @@ class RoleCall:
             return
 
         settings["ROLEBOARD"] = channel and channel.name
-        dataIO.save_json(SETTINGS_PATH, self.settings)
+        self._save()
         await self.bot.say('Roleboard is now {}'.channel)
 
     async def prompt(self, ctx, *args, **kwargs):
@@ -122,6 +122,9 @@ class RoleCall:
                       lambda r: r.reaction.emoji == '✅')
 
         return await wait_for_first_response(tasks, converters)
+
+    def _save(self):
+        return dataIO.save_json(SETTINGS_PATH, self.settings)
 
 
 async def wait_for_first_response(tasks, converters):
