@@ -74,7 +74,7 @@ class Ffplayer:
 
     @volume.setter
     def volume(self, value):
-        self._volume = 0 if value < 0 else 2 if value > 2 else value
+        self._volume = min(max(0, value), 2)
         self.stop(wait=False)
         if not self._paused:
             if self._timer is None:
