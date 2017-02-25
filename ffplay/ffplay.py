@@ -11,8 +11,6 @@ import os
 import time
 import psutil
 
-# TODO: psutil in requirements
-
 # mac users may have to:
 # brew reinstall ffmpeg --with-ffplay
 
@@ -125,7 +123,9 @@ class Ffplayer:
 
 
 class Ffplay:
-    """ffplay - monkeypatch create_ffmpeg_player to play audio locally. quick solution"""
+    """Ffplay - monkeypatch create_ffmpeg_player to play audio locally.
+    A quick solution made to play music in good quality during a bootcamp.
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -136,7 +136,7 @@ class Ffplay:
     @commands.command(pass_context=True, no_pm=True)
     @checks.is_owner()
     async def speaker(self, ctx, add_server: str=None):
-        """Toggles playing music through bot's host computer and discord
+        """Toggles playing music through bot's host computer and discord for this server
 
         Setting takes effect after the current song
         By default only one server can play through the host computer at a time.
