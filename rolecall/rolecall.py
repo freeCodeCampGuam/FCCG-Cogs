@@ -50,11 +50,32 @@ if on mobile,
 !rolecall react Website-Team :emoji:
  try: add_reaction
  except: don't have perms or don't have access to that emoji, react it yourself or use a different emoji
+
+don't let people add themselves to a role if they mention it? to avoid mention spam
+
+WATCH_FOR: message members get stale. always check on a fresh copy from bot.get_message
+WATCH_FOR: you will need to go through and find the 1st role mention yourself or better yet, have it be an argument and don't require it to be in the message
+
+TODO: Make Entry/Call a class that handles the data for me (what is an entry on a roleboard called?)
 """
+
+class Entry:
+    """Entry on the roleboard"""
+
+    def __init__(self, bot, save_point, server, channel, author):
+        pass
+
+
+class RoleBoard:
+    """Server-based Roleboard"""
+
+    def __init__(self, bot, save_point, server):
+        pass
 
 
 class RoleCall:
-    """Self-assign roles via reactions on a roleboard"""
+    """Self-assign roles via reactions on a roleboard
+    or via command (for mobile users)"""
 
     def __init__(self, bot):
         self.bot = bot
