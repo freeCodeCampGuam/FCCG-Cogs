@@ -1,0 +1,9 @@
+{
+    "AUTHOR" : "irdumb",
+    "INSTALL_MSG" : "```diff\n!! WARNING !!\n```This cog monkeypatches discord.VoiceClient's create_ffmpeg_player.\nThis is not a full implementation of create_ffmpeg_player and is only meant for regular Audio usage. \n**Use at your own risk.**\n\nCog integrates with the Audio cog. It needs to be loaded for this cog to work.\n\n`[p]help Ffplay` for more information on this cog",
+    "NAME" : "Ffplay",
+    "SHORT" : "Play audio through your computer.",
+    "DESCRIPTION" : "Play audio through your bot's host machine instead of through discord for higher quality sound.\nOther servers can still use your bot to play music through discord.\n\nThis Cog integrates with Audio, so you still must be in a voice channel to play music.",
+    "REQUIREMENTS": ["psutil"],
+    "TAGS" : ["audio", "music", "voice", "local", "speaker", "tools", "monkeypatch"]
+}
