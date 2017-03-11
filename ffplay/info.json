@@ -5,5 +5,5 @@
     "SHORT" : "Play audio through your computer.",
     "DESCRIPTION" : "Play audio through your bot's host machine instead of through discord for higher quality sound.\nOther servers can still use your bot to play music through discord.\n\nThis Cog integrates with Audio, so you still must be in a voice channel to play music.",
     "REQUIREMENTS": ["psutil"],
-    "TAGS" : ["audio", "music", "voice", "local", "speaker", "tools", "monkeypatch"]
+    "TAGS" : ["audio", "music", "voice", "local", "speaker"]
 }
