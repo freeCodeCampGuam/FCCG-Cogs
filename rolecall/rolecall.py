@@ -97,7 +97,7 @@ class RoleCall:
             self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
     @roleboard.command(pass_context=True, name="channel", no_pm=True)
-    async def rolecall_channel(self, ctx, channel: discord.Channel=None):
+    async def roleboard_channel(self, ctx, channel: discord.Channel=None):
         """Set the roleboard for this server.
 
         Leave blank to turn off the roleboard
