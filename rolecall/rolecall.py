@@ -87,8 +87,8 @@ class RoleCall:
         self.settings = dataIO.load_json(SETTINGS_PATH)
 
     @commands.group(pass_context=True, no_pm=True)
-    async def rolecall(self, ctx):
-        """change rolecall settings"""
+    async def roleboard(self, ctx):
+        """change roleboard settings"""
         server = ctx.message.server
 
         if ctx.invoked_subcommand is None:
@@ -96,8 +96,8 @@ class RoleCall:
         else:
             self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
-    @rolecall.command(pass_context=True, name="roleboard", no_pm=True)
-    async def rolecall_roleboard(self, ctx, channel: discord.Channel=None):
+    @roleboard.command(pass_context=True, name="channel", no_pm=True)
+    async def rolecall_channel(self, ctx, channel: discord.Channel=None):
         """Set the roleboard for this server.
 
         Leave blank to turn off the roleboard
