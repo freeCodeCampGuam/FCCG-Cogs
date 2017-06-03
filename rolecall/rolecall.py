@@ -144,7 +144,7 @@ class RoleCall:
 
         mcheck = lambda msg: msg.content.lower().startswith(('yes', 'no', 'cancel'))
 
-        tasks = (self.bot.wait_for_message(author=author, timeout=15, channel=channel
+        tasks = (self.bot.wait_for_message(author=author, timeout=15, channel=channel,
                                            check=mcheck),
                  self.bot.wait_for_reaction(user=author, timeout=15, message=message,
                                             emoji=('✅', '❌') ))
