@@ -123,7 +123,7 @@ class RoleCall:
 
         settings["ROLEBOARD"] = channel and channel.name
         self._save()
-        await self.bot.say('Roleboard is now {}'.channel)
+        await self.bot.say('Roleboard is now {}'.format(channel))
 
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
