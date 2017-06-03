@@ -25,8 +25,6 @@ MSG_STRUCT = {
 
 async def post_role(self, role: discord.Role, channel: discord.Channel,
                     author: discord.Member, content=None, embed=None):
-    if not (content or embed):
-        raise discord.HTTPException("BAD REQUEST (status code: 400): Cannot send an empty message")
     m = await self.bot.send_message(channel, content, embed=embed)
     post = {
         "ID": m.id,
