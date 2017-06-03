@@ -33,6 +33,22 @@ async def post_role(self, role: discord.Role, channel: discord.Channel,
         "EMOJI": None
     }
 
+def get_channel_by_name(server, name):
+    channels = [c for c in server.channels if c.name==name]
+    if len(channels) > 1:
+        raise MultipleChannelsWithThatName("There are multiple channels "
+                                           "with the name: " + name)
+    if len(channels) == 0:
+        raise NoChannelWithThatName("There is no channel "
+                                    "with tha name: " + name)
+    return channels[0]
+
+class NoChannelWithThatName(Exception):
+    pass
+
+class MultipleChannelsWithThatName(Exception):
+    pass
+
 
 """
 Implementation notes:
@@ -103,7 +119,7 @@ class RoleCall:
         Leave blank to turn off the roleboard
         """
         server = ctx.message.server
-        channel = ctx.message.channel
+        #channel = ctx.message.channel
         author = ctx.message.author
 
         """
@@ -114,11 +130,15 @@ class RoleCall:
         """
 
         settings = self.settings[server.id]
+
         if channel is None and not \
-           await self.prompt(author, "turn off the roleboard? (yes/no)"):
+           await self.prompt(ctx, "turn off the roleboard? (yes/no)"):
+            if settings["ROLEBOARD"] is None:
+                rb_channel = None
+            else:
+                rb_channel = get_channel_by_name(server, settings["ROLEBOARD"])
             await self.bot.say('Ok. Roleboard is still {}'
-                               .format(settings["ROLEBOARD"] and
-                                       settings["ROLEBOARD"].mention))
+                               .format(rb_channel and rb_channel.mention))
             return
 
         settings["ROLEBOARD"] = channel and channel.name
