@@ -145,6 +145,27 @@ class RoleCall:
         self._save()
         await self.bot.say('Roleboard is now {}'.format(channel))
 
+    @roleboard.command(pass_context=True, name="add", no_pm=True)
+    async def roleboard_add(self, ctx, role: str,
+                            emoji: discord.Emoji,
+                            content_or_messsage_id: str,
+                            channel: str=None):
+        """Add an entry to the roleboard."""
+        server = ctx.message.server
+        # channel = ctx.message.channel
+        author = ctx.message.author
+
+        channel = channel or role.lower()
+
+        role = self.get_or_create("role", role)
+
+        description = ("called **#{}** that only people with the {} role "
+                       "can access?".format(channel, role.mention))
+        embed = discord.Embed(title="Create a Channel?",
+                              description=description)
+        embed.set_footer(text="*or type a different channel name or the name of an existing channel to link that channel instead.")
+        await self.prompt(ctx, embed=embed)
+
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
         the prompt is sent via bot.say with the additional args,kwargs passed
