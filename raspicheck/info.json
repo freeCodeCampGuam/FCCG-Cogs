@@ -1,0 +1,9 @@
+{
+    "AUTHOR" : "xell0s",
+    "INSTALL_MSG" : "Thanks for installing Raspi-Check",
+    "NAME" : "raspicheck",
+    "SHORT" : "Checking utilities for Raspbery Pis",
+    "DESCRIPTION" : "This cog allows for checking your Raspberry Pi's Core Temp, Uptime, CPU Usage, and Local IP",
+    "REQUIREMENTS": ["psutil"],
+    "TAGS" : ["utility"]
+}
