@@ -194,6 +194,24 @@ class RoleCall:
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
 
+    def _get_object_by_name(self, otype, server, name, ignore_case=True):
+        """returns object of specified type from server of specified name
+        otype is discord.Role or discord.Channel
+        """
+        types = {
+            discord.Role: 'roles',
+            discord.Channel: 'channels'
+        }
+        li = getattr(server, types[otype])
+        if ignore_case:
+            match = [i for i in li if i.name.lower() == name.lower()]
+        else:
+            match = [i for i in li if i.name == name]
+        if len(match) > 1:
+            raise Exception("More than one {} found".format(types[otype][:-1]))
+        return match[0]
+
+
 
 async def wait_for_first_response(tasks, converters):
     """given a list of unawaited tasks and non-coro result parsers to be called on the results,
