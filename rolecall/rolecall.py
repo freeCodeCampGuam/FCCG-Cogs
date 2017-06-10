@@ -146,21 +146,19 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role: str,
-                            emoji: discord.Emoji,
-                            content_or_messsage_id: str,
-                            channel: str=None):
+    async def roleboard_add(self, ctx, role_name: str,
+                            content_or_messsage_id: str):
         """Add an entry to the roleboard."""
         server = ctx.message.server
         # channel = ctx.message.channel
         author = ctx.message.author
 
-        channel = channel or role.lower()
+        channel = channel or role_name.lower()
 
-        role = self.get_or_create("role", role)
+        role_name = self.get_or_create("role", role_name)
 
         description = ("called **#{}** that only people with the {} role "
-                       "can access?".format(channel, role.mention))
+                       "can access?".format(channel, role_name.mention))
         embed = discord.Embed(title="Create a Channel?",
                               description=description)
         embed.set_footer(text="*or type a different channel name or the name of an existing channel to link that channel instead.")
