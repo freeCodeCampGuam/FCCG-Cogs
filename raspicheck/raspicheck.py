@@ -16,6 +16,12 @@ class RasPiCheck:
 
     def __init__(self, bot):
         self.bot = bot
+        # self.subprocess = subprocess
+        # self.os = os
+        # self.psutil = psutil
+
+        self.bot.loop.create_task(self.infoscroll())
+
     async def infoscroll(self):
         while not self.bot.is_closed:
             await self.bot.change_presence(game=None)
