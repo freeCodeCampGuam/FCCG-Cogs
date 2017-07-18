@@ -6,10 +6,93 @@ from bs4 import BeautifulSoup
 import asyncio
 import os
 import aiohttp
+import re
 from random import randint
 from random import choice as randchoice
+from __main__ import send_cmd_help
 
 SETTINGS_PATH = "data/pico8/settings.json"
+
+
+class BBS:
+    """BBS Api Wrapper"""
+    BASE = "https://www.lexaloffle.com/bbs/"
+    PARAMS = {
+        "cat": {
+            "VOXATRON":      "6",
+            "PICO8":         "7",
+            "BLOGS":         "8"
+        },
+        "sub": {
+            "DISCUSSIONS":   "1",
+            "CARTRIDGES":    "2",
+            "WIP":           "3",
+            "COLLABORATION": "4",
+            "WORKSHOPS":     "5",
+            "SUPPORT":       "6",
+            "BLOGS":         "7",
+            "JAMS":          "8",
+            "SNIPPETS":      "9",
+            "PIXELS":        "10",
+            "ART":           "10",
+            "MUSIC":         "11"
+        },
+        "orderby": {
+            "":              "ts"
+        }
+    }
+
+    def __init__(self, params={}):
+        self.url = BBS.BASE
+        self.params = {}
+        for p, v in params.items():
+            self.set_param(p, v)
+
+    def set_search(self, term):
+        self.params.update({'search': term})
+
+    def search(self, term):
+        self.set_search(term)
+        r = self._get()
+        # continue
+
+    def _get(self):
+        async with aiohttp.get(self.url, params=self.params) as r:
+            result = await r.text()
+        return text
+
+    def set_param(self, param, value_name):
+        self.params[param] = get_value(param, value_name)
+
+    def set_param_by_prefix(self, param, prefix):
+        value_name = self.get_value_name_by_prefix(param, prefix)
+        return self.add_param(param, value_name)
+
+    def param_exists(self, param):
+        return param in BBS.PARAMS
+
+    def value_name_exists(self, param, value_name):
+        return self.param_exists(param) and value_name in BBS.PARAMS[param]
+
+    def get_value(self, param, value_name):
+        return BBS.PARAMS[param][value_name]
+
+    def get_value_by_prefix(self, param, prefix):
+        value_name = self.get_value_name_by_prefix(param, prefix)
+        return self.get_value(param, value_name)
+
+    def get_value_name_by_prefix(self, param, prefix):
+        group = BBS.PARAMS[param]
+        upper_no_s = prefix.upper()[-1]
+
+        for name in group:
+            if name.startswith(upper_no_s):
+                return name
+
+        raise ValueError('Prefix {} not found in param {}'
+                         .format(prefix, param))
+
+# [{'href':t.a['href'], 'text':t.a.text}  for t in s.find_all(id=re.compile("pdat_.*"))]
 
 
 class Pico8:
@@ -19,15 +102,25 @@ class Pico8:
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
 
-    @checks.mod_or_permissions(administrator=True)
-    @commands.command(pass_context=True, no_pm=True)
+    @commands.group(pass_context=True, no_pm=True, aliases=['pico8'])
     async def bbs(self, ctx):
-        """search for PICO-8 topics on Lexaloffle's BBS"""
-        server = ctx.message.server
-        channel = ctx.message.channel
-        author = ctx.message.author
+        """PICO-8 bbs commands"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
 
+    @bbs.command(pass_context=True, name="search", no_pm=True)
+    async def bbs_search(self, ctx, category="Recent", search_terms=""):
+        """Search PICO-8's bbs in a certain category
 
+        Categories (default Recent):
+            Recent       Discussion   Blogs       
+            Carts        Collab       Workshop     
+            Support      Jam          WIP          
+            Snippets     Art          Music
+
+        leave search_term blank to list newest topics
+        in the category
+        """
 def check_folders():
     paths = ("data/pico8", )
     for path in paths:
