@@ -114,9 +114,9 @@ class Pico8:
         """Search PICO-8's bbs in a certain category
 
         Categories (default Recent):
-            Recent       Discussion   Blogs       
-            Carts        Collab       Workshop     
-            Support      Jam          WIP          
+            Recent       Discussion   Blogs
+            Carts        Collab       Workshop
+            Support      Jam          WIP
             Snippets     Art          Music
 
         leave search_term blank to list newest topics
