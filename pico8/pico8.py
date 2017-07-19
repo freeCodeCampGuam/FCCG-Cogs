@@ -52,12 +52,12 @@ class BBS:
     def set_search(self, term):
         self.params.update({'search': term})
 
-    def search(self, term):
+    async def search(self, term):
         self.set_search(term)
-        r = self._get()
+        r = await self._get()
         # continue
 
-    def _get(self):
+    async def _get(self):
         async with aiohttp.get(self.url, params=self.params) as r:
             result = await r.text()
         return text
