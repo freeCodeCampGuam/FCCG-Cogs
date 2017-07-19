@@ -46,6 +46,7 @@ class BBS:
         self.url = BBS.BASE
         self.params = {}
         self.set_param("orderby", "")
+        self.posts = []
         for p, v in params.items():
             self.set_param(p, v)
 
@@ -54,13 +55,31 @@ class BBS:
 
     async def search(self, term):
         self.set_search(term)
-        r = await self._get()
+        self._populate_results()
+        return self.posts
+
+    async def _populate_results(self):
+        raw = await self._get()
+        soup = BeautifulSoup(raw, "html.parser")
+        posts = soup.find_all(id=re.compile("pdat_.*"))
+        self.posts = [[t.a.text, t.a['href']] for t in posts]
+
+    async def get_post(self, index_or_post):
+        try:
+            index = self.posts.index(index_or_post)
+        except ValueError:
+            index = index_or_post
+        raw = await self._get_post(index)
         # continue
 
-    async def _get(self):
-        async with aiohttp.get(self.url, params=self.params) as r:
-            result = await r.text()
-        return text
+    async def _get_post(self, index):
+        post = self.posts[index]
+        return self._get(post[1])
+
+    async def _get(self, params=None):
+        params = params or self.params
+        async with aiohttp.get(self.url, params=params) as r:
+            return await r.text()
 
     def set_param(self, param, value_name):
         self.params[param] = get_value(param, value_name)
