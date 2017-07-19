@@ -45,6 +45,7 @@ class BBS:
     def __init__(self, params={}):
         self.url = BBS.BASE
         self.params = {}
+        self.set_param("orderby", "")
         for p, v in params.items():
             self.set_param(p, v)
 
