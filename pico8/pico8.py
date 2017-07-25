@@ -114,6 +114,29 @@ class BBS:
 
 # [{'href':t.a['href'], 'text':t.a.text}  for t in s.find_all(id=re.compile("pdat_.*"))]
 
+"""
+UI Ideas:
+
+Cart: 
+    png for thumbnail
+    in code:
+        -- cart name
+        -- by author
+
+Other:
+    link
+    author thumbnail somewhere
+    author name
+    title
+    description[:n_chars] + '...'
+    stars
+    hearts
+    CC?
+    tags
+    date
+
+"""
+
 
 class Pico8:
     """cog to search Lexaloffle's BBS and notify when new PICO-8 carts are uploaded"""
