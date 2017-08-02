@@ -138,11 +138,11 @@ class KeyDistrib:
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
     async def givekey(self, ctx, user: discord.Member):
-        """description"""
+        """#TODO: description"""
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
-        # send user confirmation prompt
+        #TODO: send user confirmation prompt
         await self.bot.whisper("")
 
 
