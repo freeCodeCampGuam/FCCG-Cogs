@@ -69,7 +69,7 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-    @checks.is_owner()
+   	@checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
         """#TODO: description"""
@@ -115,6 +115,7 @@ class KeyDistrib:
         self._save()
         #TODO: tell user it's done
 
+    @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
     async def distribset_toggle(self, ctx, file_path):
         """#TODO: description"""
