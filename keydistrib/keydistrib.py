@@ -139,8 +139,14 @@ class KeyDistrib:
         self._save()
         await self.bot.reply(msg)
 
-
-
+    @distribset.command(pass_context=True, name="msg", aliases=["message"], no_pm=True)
+    async def distribset_msg(self, ctx, file_path, msg=None):
+        """#TODO: description"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+        #TODO: "[p]distribset msg" by itself sets msg to default on confirmation.
+        #TODO: write this. 
 
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
