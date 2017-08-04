@@ -28,6 +28,8 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #			Once you do that, you should recieve an email with the download link!
 #	   see customcom.py (welcome.py original) for ex.
 #TODO: ^ have a default for that
+#TODO: associate file_path with name of key group. (keys.txt => PICO-8)
+
 
 #TODO: 2nd phase
 #TODO: hand out key on join from specific invite url
