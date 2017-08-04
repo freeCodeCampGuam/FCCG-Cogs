@@ -22,6 +22,10 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #TODO:  if confirmed
 #TODO:  who gave the key
 #TODO:  userinfo: name/id/date
+#TODO: formattable msg per keyfile ex: "Welcome to the PICO-8 bootcamp! 
+# 			{sender.display_name} has sent you a PICO-8 key. Please click {key} and
+#			register to loxaloffle with an email account you have access to. 
+#			Once you do that, you should recieve an email with the download link!
 
 #TODO: 2nd phase
 #TODO: hand out key on join from specific invite url
