@@ -74,15 +74,16 @@ class KeyDistrib:
         #keys difference is the symmetric difference of keys inside settings file and in the key list
         keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
         # if key from key_difference is in keys_in_settings and
-        # status is unused, then delete key_in_setting 
+        # status is not new and not used, then delete key_in_setting 
+        # else, add it to keys_in_settings
         for key in keys_difference:
-            if keys_in_settings[key] is not None:
+            if key in keys_in_settings:
                 status = keys_in_settings[key]["STATUS"]
-                if key in set(keys_in_settings.keys()):
-                    if status is "UNUSED":
-                        del keys_in_settings["KEYS"][key]
-                else:
-                    keys_in_settings.update({key: None})
+                if keys_in_settings[key] is not None:
+                    if status == "UNUSED":
+                        del keys_in_settings[key]
+            else:
+                    keys_in_settings[key] = None
 
 
 
