@@ -8,6 +8,7 @@ import os
 import aiohttp
 from random import randint
 from random import choice as randchoice
+from __main__ import send_cmd_help
 
 SETTINGS_PATH = "data/keydistrib/settings.json"
 
