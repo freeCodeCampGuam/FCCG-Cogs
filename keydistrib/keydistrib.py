@@ -82,7 +82,7 @@ class KeyDistrib:
         """#TODO: description"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
-    
+
     @checks.is_owner()
     @distribset.command(pass_context=True, name="file", no_pm=True)
     async def distribset_file(self, ctx, file_path):
@@ -166,13 +166,12 @@ class KeyDistrib:
         await self.bot.whisper("")
 
 
-
 def check_folders():
     paths = ("data/keydistrib", )
     for path in paths:
-      if not os.path.exists(path):
-          print("Creating {} folder...".format(path))
-          os.makedirs(path)
+        if not os.path.exists(path):
+            print("Creating {} folder...".format(path))
+            os.makedirs(path)
 
 
 def check_files():
@@ -197,8 +196,3 @@ def setup(bot: red.Bot):
     check_files()
     n = KeyDistrib(bot)
     bot.add_cog(n)
-
-async with aiohttp.get(url) as response:
-  a = await r.text()
-
-print(a)
