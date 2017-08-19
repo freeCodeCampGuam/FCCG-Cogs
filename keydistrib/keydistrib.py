@@ -30,6 +30,8 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #TODO: ^ have a default for that
 #TODO: associate file_path with name of key group. (keys.txt => PICO-8)
 
+#TODO: track transactions in process
+#TODO: if keyfile changed, remove unused keys even if transaction is in place
 
 #TODO: 2nd phase
 #TODO: hand out key on join from specific invite url
@@ -57,6 +59,9 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #     },
 #     "USERS": {
 #         "uid": ["filepath\nkey"]  # key indexes
+#     },
+#     "TRANSACTIONS": {
+#         "uid": "filepath\nkey"
 #     }
 # }
 
