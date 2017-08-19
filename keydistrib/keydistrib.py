@@ -23,10 +23,10 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #TODO:  who gave the key
 #TODO:  userinfo: name/id/date
 #TODO: formattable msg per keyfile ex: "Welcome to the PICO-8 bootcamp! 
-# 			{sender.display_name} has sent you a PICO-8 key. Please click {key} and
-#			register to loxaloffle with an email account you have access to. 
-#			Once you do that, you should recieve an email with the download link!
-#	   see customcom.py (welcome.py original) for ex.
+#           {sender.display_name} has sent you a PICO-8 key. Please click {key} and
+#           register to loxaloffle with an email account you have access to. 
+#           Once you do that, you should recieve an email with the download link!
+#      see customcom.py (welcome.py original) for ex.
 #TODO: ^ have a default for that
 #TODO: associate file_path with name of key group. (keys.txt => PICO-8)
 
@@ -76,7 +76,7 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-   	@checks.admin_or_permissions()
+    @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
         """#TODO: description"""
