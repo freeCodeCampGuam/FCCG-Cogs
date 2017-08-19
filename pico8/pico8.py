@@ -70,6 +70,7 @@ class BBS:
         except ValueError:
             index = index_or_post
         raw = await self._get_post(index)
+        soup = BeautifulSoup(raw, "html.parser")
         # continue
 
     async def _get_post(self, index):
