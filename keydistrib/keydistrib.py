@@ -41,6 +41,7 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #TODO: also get key-list in DM from mod/admin?
 #TODO: msg tied to each file/key (line override)
 
+#TODO: option to limit # of keys
 
 #---- settings format -----
 # settings = {
