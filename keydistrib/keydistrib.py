@@ -8,6 +8,7 @@ import os
 import aiohttp
 from random import randint
 from random import choice as randchoice
+from __main__ import send_cmd_help
 
 SETTINGS_PATH = "data/keydistrib/settings.json"
 
@@ -22,6 +23,16 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #TODO:  if confirmed
 #TODO:  who gave the key
 #TODO:  userinfo: name/id/date
+#TODO: formattable msg per keyfile ex: "Welcome to the PICO-8 bootcamp! 
+#           {sender.display_name} has sent you a PICO-8 key. Please click {key} and
+#           register to loxaloffle with an email account you have access to. 
+#           Once you do that, you should recieve an email with the download link!
+#      see customcom.py (welcome.py original) for ex.
+#TODO: ^ have a default for that
+#TODO: associate file_path with name of key group. (keys.txt => PICO-8)
+
+#TODO: track transactions in process
+#TODO: if keyfile changed, remove unused keys even if transaction is in place
 
 #TODO: 2nd phase
 #TODO: hand out key on join from specific invite url
@@ -30,6 +41,7 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #TODO: also get key-list in DM from mod/admin?
 #TODO: msg tied to each file/key (line override)
 
+#TODO: option to limit # of keys
 
 #---- settings format -----
 # Diagram: settings->(FILES->filepath->(SERVERS,KEYS->key), USERS->uid)
@@ -53,6 +65,9 @@ SETTINGS_PATH = "data/keydistrib/settings.json"
 #     },
 #     "USERS": {
 #         "uid": ["filepath\nkey"]  # key indexes
+#     },
+#     "TRANSACTIONS": {
+#         "uid": "filepath\nkey"
 #     }
 # }
 #
@@ -87,15 +102,28 @@ class KeyDistrib:
                     keys_in_settings[key] = None
 
 
+    def _name_to_path(self, name):
+        """converts a keyfile name to a path to it
+        assume names don't have path included and files have
+        .txt extension or no extension
 
+        raises FileNotFoundError if file does not exist
+        """
+        name = os.path.join('data/keydistrib/keys', name)
+        if os.path.exists(name):
+            return name
+        name = name + '.txt'
+        if os.path.exists(name):
+            return name 
+        raise FileNotFoundError('No such file: ' + name)
 
-    @checks.is_owner()
+    @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
         """#TODO: description"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
-    
+
     @checks.is_owner()
     @distribset.command(pass_context=True, name="file", no_pm=True)
     async def distribset_file(self, ctx, file_path):
@@ -135,14 +163,18 @@ class KeyDistrib:
         self._save()
         await self.bot.reply("Keys are ready to be sent.")
 
+    @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
-    async def distribset_toggle(self, ctx, file_path):
+    async def distribset_toggle(self, ctx, name):
         """#TODO: description"""
         server = ctx.message.server
+
+        file_path = self._name_to_path(name)
 
         try:
             keyring = self.settings["FILES"][file_path]
         except KeyError:
+
             await self.bot.say("That file has not been added yet.\n"
                                "Add it with `{}distribset file`"
                                .format(ctx.prefix))
@@ -158,8 +190,14 @@ class KeyDistrib:
         self._save()
         await self.bot.reply(msg)
 
-
-
+    @distribset.command(pass_context=True, name="msg", aliases=["message"], no_pm=True)
+    async def distribset_msg(self, ctx, file_path, msg=None):
+        """#TODO: description"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+        #TODO: "[p]distribset msg" by itself sets msg to default on confirmation.
+        #TODO: write this. 
 
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
@@ -172,13 +210,12 @@ class KeyDistrib:
         await self.bot.whisper("")
 
 
-
 def check_folders():
     paths = ("data/keydistrib", )
     for path in paths:
-      if not os.path.exists(path):
-          print("Creating {} folder...".format(path))
-          os.makedirs(path)
+        if not os.path.exists(path):
+            print("Creating {} folder...".format(path))
+            os.makedirs(path)
 
 
 def check_files():
@@ -203,5 +240,4 @@ def setup(bot: red.Bot):
     check_files()
     n = KeyDistrib(bot)
     bot.add_cog(n)
-
 
