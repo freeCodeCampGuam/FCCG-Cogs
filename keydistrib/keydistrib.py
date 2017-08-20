@@ -78,6 +78,21 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
+    def _name_to_path(self, name):
+        """converts a keyfile name to a path to it
+        assume names don't have path included and files have
+        .txt extension or no extension
+
+        raises FileNotFoundError if file does not exist
+        """
+        name = os.path.join('data/keydistrib/keys', name)
+        if os.path.exists(name):
+            return name
+        name = name + '.txt'
+        if os.path.exists(name):
+            return name 
+        raise FileNotFoundError('No such file: ' + name)
+
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
@@ -126,13 +141,16 @@ class KeyDistrib:
 
     @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
-    async def distribset_toggle(self, ctx, file_path):
+    async def distribset_toggle(self, ctx, name):
         """#TODO: description"""
         server = ctx.message.server
+
+        file_path = self._name_to_path(name)
 
         try:
             keyring = self.settings["FILES"][file_path]
         except KeyError:
+
             await self.bot.say("That file has not been added yet.\n"
                                "Add it with `{}distribset file`"
                                .format(ctx.prefix))
