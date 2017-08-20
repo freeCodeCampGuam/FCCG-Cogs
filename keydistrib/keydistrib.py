@@ -88,7 +88,6 @@ class KeyDistrib:
     def _update_keys(self, file_path, keys):
 
         keys_in_settings = self.settings["FILES"][file_path]["KEYS"]
-        #keys difference is the symmetric difference of keys inside settings file and in the key list
         keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
         for key in keys_difference:
             if key in keys_in_settings:
