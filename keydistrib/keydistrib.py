@@ -73,6 +73,43 @@ KEYS_PATH = "data/keydistrib/keys"
 # }
 #
 
+def update_keys(command, all_keys=False):
+    """assumes 3rd arg is name
+    """
+
+    def update_wrapper(*args, **kwargs):
+        # instance is the cog instance
+        settings = command.instance.settings 
+        self = args[0]
+        if all_keys:
+            keyfiles = [*settings['FILES']]
+        else:
+            keyfiles = [args[2]]
+        for name, keyring in keyfiles:
+            try:
+                path = _name_to_path(name)
+            except FileNotFoundError:
+                self._update_keys(name, keys)
+            else:
+                keys = read_keys(path)
+                # what if our mtime is newer than file's?
+                #TODO: prompt user?
+                mtime = os.path.getmtime(path)
+                if mtime != keyring["DATE_MODIFIED"]:
+                    # removes non-existing unused keys
+                    # adds new keys
+                    #TODO: write this
+                    self._update_keys(name, keys)
+
+            if server.id not in keyring["SERVERS"]:
+                keyring["SERVERS"].append(server.id)
+            #TODO: tell user it's done
+        self._save()
+        
+        return command(*args, **kwargs)
+
+    return update_wrapper
+
 
 class KeyFileName(commands.Converter):
     def convert(self):
@@ -208,6 +245,7 @@ class KeyDistrib:
         #TODO: "[p]distribset msg" by itself sets msg to default on confirmation.
         #TODO: write this. 
 
+    @update_keys()
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
     async def givekey(self, ctx, name: KeyFileName, user: discord.Member):
@@ -218,6 +256,12 @@ class KeyDistrib:
         #TODO: send user confirmation prompt
         await self.bot.whisper("")
 
+
+def read_keys(path):
+    #TODO: Make this a generator?
+    with open(path) as f:
+        contents = f.read()
+    return list(filter(None, contents.splitlines()))
 
 
 def _name_to_path(name):
