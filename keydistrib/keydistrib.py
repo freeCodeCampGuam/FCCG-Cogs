@@ -103,12 +103,10 @@ class KeyDistrib:
             if key in keys_in_settings:
                 if keys_in_settings[key] is None:
                     del keys_in_settings[key]
-                else:
-                    status = keys_in_settings[key]["STATUS"]
-                    if status == "UNUSED":
-                        del keys_in_settings[key]
-            else:
-                    keys_in_settings[key] = None
+                elif keys_in_settings[key]["STATUS"] == "UNUSED":
+                    del keys_in_settings[key]
+            else:  # add it
+                keys_in_settings[key] = None
 
     def new_keyring(self, server, file_path):
         with open(file_path) as f:
