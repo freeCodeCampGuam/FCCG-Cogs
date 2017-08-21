@@ -11,6 +11,7 @@ from random import choice as randchoice
 from __main__ import send_cmd_help
 
 SETTINGS_PATH = "data/keydistrib/settings.json"
+KEYS_PATH = "data/keydistrib/keys"
 
 
 #TODO: 1st phase
@@ -187,7 +188,7 @@ class KeyDistrib:
 
 
 def check_folders():
-    paths = ("data/keydistrib", )
+    paths = ("data/keydistrib", KEYS_PATH)
     for path in paths:
         if not os.path.exists(path):
             print("Creating {} folder...".format(path))
