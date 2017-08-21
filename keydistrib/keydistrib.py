@@ -45,7 +45,11 @@ KEYS_PATH = "data/keydistrib/keys"
 #TODO: option to limit # of keys
 
 #---- settings format -----
-# settings = {
+# Diagram: settings->(FILES->filepath->(SERVERS,KEYS->key), USERS->uid)
+# 
+# Actual: 
+#
+#settings = {
 #     "FILES": {
 #         "filepath": {
 #             "SERVERS": ["sid"],
@@ -67,6 +71,7 @@ KEYS_PATH = "data/keydistrib/keys"
 #         "uid": "filepath\nkey"
 #     }
 # }
+#
 
 
 class KeyFileName(commands.Converter):
@@ -88,6 +93,22 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
+    """ this function deletes unused keys in settings file. Otherwise, if it is a newly added key to the
+     keys file, it initializes it to None. """
+    def _update_keys(self, file_path, keys):
+
+        keys_in_settings = self.settings["FILES"][file_path]["KEYS"]
+        keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
+        for key in keys_difference:
+            if key in keys_in_settings:
+                if keys_in_settings[key] is None:
+                    del keys_in_settings[key]
+                else:
+                    status = keys_in_settings[key]["STATUS"]
+                    if status == "UNUSED":
+                        del keys_in_settings[key]
+            else:
+                    keys_in_settings[key] = None
 
 
     @checks.admin_or_permissions()
@@ -109,14 +130,15 @@ class KeyDistrib:
         if not os.path.isabs(file_path):
             file_path = 'data/keydistrib/' + file_path
         if not os.path.exists(file_path):
-            #TODO: tell user file doesn't exist
+            await self.bot.say("The specified file does not exist.")
             return
 
+        # open file containing keys
         with open(file_path) as f:
             contents = f.read()
         keys = filter(None, contents.splitlines())
-        mtime = os.path.getmtime(path)
-
+        mtime = os.path.getmtime(file_path)
+        # Returns indicated file_path dict. If file doesn't exist, it is added
         keyring = self.settings["FILES"].setdefault(file_path, {
             "SERVERS": [server.id],
             "KEYS": {k: None for k in keys},
@@ -127,14 +149,13 @@ class KeyDistrib:
         if mtime != keyring["DATE_MODIFIED"]:
             # removes non-existing unused keys
             # adds new keys
-            #TODO: write this
             self._update_keys(file_path, keys)
 
         if server.id not in keyring["SERVERS"]:
             keyring["SERVERS"].append(server.id)
 
         self._save()
-        #TODO: tell user it's done
+        await self.bot.reply("Keys are ready to be sent.")
 
     @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
@@ -231,3 +252,4 @@ def setup(bot: red.Bot):
     check_files()
     n = KeyDistrib(bot)
     bot.add_cog(n)
+
