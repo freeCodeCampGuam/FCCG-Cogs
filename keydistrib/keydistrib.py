@@ -110,6 +110,20 @@ class KeyDistrib:
             else:
                     keys_in_settings[key] = None
 
+    def new_keyring(self, server, file_path)
+        with open(file_path) as f:
+            contents = f.read()
+        keys = filter(None, contents.splitlines())
+        mtime = os.path.getmtime(path)
+
+        keyring = self.settings["FILES"].setdefault(file_path, {
+            "SERVERS": [server.id],
+            "KEYS": {k: None for k in keys},
+            "DATE_MODIFIED": mtime
+        })
+
+        self._save()
+        return keyring
 
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
@@ -167,7 +181,8 @@ class KeyDistrib:
 
         try:
             keyring = self.settings["FILES"][file_path]
-        except KeyError:
+        except KeyError:  # keyring doesn't exist. this is a new file
+            keyring = self.new_keyring(server, file_path)
 
             await self.bot.say("That file has not been added yet.\n"
                                "Add it with `{}distribset file`"
