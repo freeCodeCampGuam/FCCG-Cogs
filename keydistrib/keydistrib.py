@@ -110,7 +110,7 @@ class KeyDistrib:
             else:
                     keys_in_settings[key] = None
 
-    def new_keyring(self, server, file_path)
+    def new_keyring(self, server, file_path):
         with open(file_path) as f:
             contents = f.read()
         keys = filter(None, contents.splitlines())
