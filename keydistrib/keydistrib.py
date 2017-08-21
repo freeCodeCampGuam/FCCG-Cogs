@@ -69,6 +69,15 @@ KEYS_PATH = "data/keydistrib/keys"
 # }
 
 
+class KeyFileName(commands.Converter):
+    def convert(self):
+        name = os.path.splitext(self.argument)[0]
+        if _name_to_path(name):
+            return name
+        raise commands.BadArgument("Can't find {} file in the {} folder"
+                                   .format(name, KEYS_PATH))
+
+
 class KeyDistrib:
     """distributes and tracks keys from a file"""
 
@@ -79,20 +88,7 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-    def _name_to_path(self, name):
-        """converts a keyfile name to a path to it
-        assume names don't have path included and files have
-        .txt extension or no extension
 
-        raises FileNotFoundError if file does not exist
-        """
-        name = os.path.join('data/keydistrib/keys', name)
-        if os.path.exists(name):
-            return name
-        name = name + '.txt'
-        if os.path.exists(name):
-            return name 
-        raise FileNotFoundError('No such file: ' + name)
 
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
@@ -103,7 +99,7 @@ class KeyDistrib:
 
     @checks.is_owner()
     @distribset.command(pass_context=True, name="file", no_pm=True)
-    async def distribset_file(self, ctx, file_path):
+    async def distribset_file(self, ctx, name: KeyFileName):
         """Set file to read keys from.
         Relative from data/keydistrib/
         Absolute filepaths work as well
@@ -142,11 +138,11 @@ class KeyDistrib:
 
     @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
-    async def distribset_toggle(self, ctx, name):
+    async def distribset_toggle(self, ctx, name: KeyFileName):
         """#TODO: description"""
         server = ctx.message.server
 
-        file_path = self._name_to_path(name)
+        file_path = _name_to_path(name)
 
         try:
             keyring = self.settings["FILES"][file_path]
@@ -168,7 +164,7 @@ class KeyDistrib:
         await self.bot.reply(msg)
 
     @distribset.command(pass_context=True, name="msg", aliases=["message"], no_pm=True)
-    async def distribset_msg(self, ctx, file_path, msg=None):
+    async def distribset_msg(self, ctx, name: KeyFileName, msg=None):
         """#TODO: description"""
         server = ctx.message.server
         channel = ctx.message.channel
@@ -178,13 +174,31 @@ class KeyDistrib:
 
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
-    async def givekey(self, ctx, user: discord.Member):
-        """#TODO: description"""
+    async def givekey(self, ctx, name: KeyFileName, user: discord.Member):
+        """Give a member a key"""
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
         #TODO: send user confirmation prompt
         await self.bot.whisper("")
+
+
+
+def _name_to_path(name):
+    """converts a keyfile name to a path to it
+    assume names don't have path included and files have
+    .txt extension or no extension
+
+    raises FileNotFoundError if file does not exist
+    """
+    #TODO: add extra checks to make sure it's within this directory for safety
+    name = os.path.join(KEYS_PATH, name)
+    if os.path.exists(name):
+        return name
+    name = name + '.txt'
+    if os.path.exists(name):
+        return name 
+    raise FileNotFoundError('No such file: ' + name)
 
 
 def check_folders():
