@@ -93,10 +93,10 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-    """ this function deletes unused keys in settings file. Otherwise, if it is a newly added key to the
-     keys file, it initializes it to None. """
     def _update_keys(self, file_path, keys):
-
+        """ this function deletes unused keys in settings file. 
+        Otherwise, if it is a newly added key to the
+        keys file, it initializes it to None. """
         keys_in_settings = self.settings["FILES"][file_path]["KEYS"]
         keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
         for key in keys_difference:
