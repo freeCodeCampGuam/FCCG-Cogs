@@ -22,7 +22,7 @@ class EmojiRace:
 
     @checks.mod_or_permissions(administrator=True)
     @commands.command(pass_context=True, no_pm=True)
-    async def emojirace(self, ctx, user: discord.Member=None):
+    async def emojirace(self, ctx, limit=100):
         """description"""
         server = ctx.message.server
         channel = ctx.message.channel
@@ -52,7 +52,7 @@ class EmojiRace:
             return self.bot.edit_message(m, "Time up!")
         # await self.bot.upload(res[0][2], content=res[0][0])
         # await self.bot.upload(res[1][2], content=res[1][0])
-        self.set_up_game(m, *(e[1] for e in res))
+        self.set_up_game(m, *(e[1] for e in res), limit=limit)
         await self.bot.say("Let the Games Begin!")
         await asyncio.sleep(120)
         try:
@@ -65,8 +65,8 @@ class EmojiRace:
 
     async def update_game(self, game):
         for e in game['players']:
-            if game['emojis'][e] >= 100:
-                await self.draw_winner(game, e)
+            if game['emojis'][e] >= game['limit']:
+                await self.draw_winner(self.settings[game_id(game['message'])], e)
                 await self.end_game(game)
 
     async def draw_game(self, game):
@@ -87,10 +87,10 @@ class EmojiRace:
         winner = self._get_lead(game)
         embed = embed_menu(winner=winner)
         await self.bot.edit_message(msg, embed=embed)
-        await self.bot.upload(os.path.join(EMOJI_PATH, winner[0]))
+        await self.bot.send_file(msg.channel, os.path.join(EMOJI_PATH, winner[0]))
 
 
-    def set_up_game(self, msg, p1e, p2e):
+    def set_up_game(self, msg, p1e, p2e, limit=100):
         now = datetime.datetime.now()
         time = now + datetime.timedelta(seconds=120)
         p1 = emoji_filename(p1e)
@@ -102,13 +102,12 @@ class EmojiRace:
             "players": [p1, p2],
             "time"   : time,
             "updated": now,
-            "drawn_lead": None
+            "drawn_lead": None,
+            "limit"  : limit
         }
 
     def _get_lead(self, game):
-        msg = game['message']
-        emojis = game['emojis'].items()
-        return emojis[0] if emojis[0][1] > emojis[1][1] else emojis[1]
+        return sorted(game['emojis'].items(), key=lambda i: i[1], reverse=True)[0]
 
     async def get_user_emoji(self, **kwargs):
         r = await self.bot.wait_for_reaction(**kwargs)
