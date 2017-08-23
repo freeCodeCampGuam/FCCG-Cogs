@@ -72,15 +72,22 @@ class EmojiRace:
     async def draw_game(self, game):
         msg = game['message']
         # pts = [(p, game['emojis'][p]) for p in game['players']]
-        e = embed_menu(game['emojis'])
-        await self.bot.edit_message(msg, embed=e)
+        emojis = sorted(game['emojis'].items(), key=lambda i: i[1], reverse=True)
+
+        s = ("GUUUUU!!\n|{:^22}"+" "*20+"{:^22}|").format(emojis[0][1], emojis[1][1])
+        if emojis[0][0] != game['drawn_lead']:
+            e = embed_menu(game['emojis'])
+            await self.bot.edit_message(msg, new_content=s, embed=e)
+        else:
+            await self.bot.edit_message(msg, new_content=s)
+        game['drawn_lead'] = emojis[0][0]
 
     async def draw_winner(self, game, emoji_filename):
         msg = game['message']
-        emojis = game['emojis'].items()
-        winner = emojis[0] if emojis[0][1] > emojis[1][1] else emojis[1][1]
+        winner = self._get_lead(game)
         embed = embed_menu(winner=winner)
         await self.bot.edit_message(msg, embed=embed)
+        await self.bot.upload(os.path.join(EMOJI_PATH, winner[0]))
 
 
     def set_up_game(self, msg, p1e, p2e):
@@ -94,8 +101,14 @@ class EmojiRace:
             "emojis" : {p1: 0, p2: 0},
             "players": [p1, p2],
             "time"   : time,
-            "updated": now
+            "updated": now,
+            "drawn_lead": None
         }
+
+    def _get_lead(self, game):
+        msg = game['message']
+        emojis = game['emojis'].items()
+        return emojis[0] if emojis[0][1] > emojis[1][1] else emojis[1]
 
     async def get_user_emoji(self, **kwargs):
         r = await self.bot.wait_for_reaction(**kwargs)
@@ -125,27 +138,29 @@ class EmojiRace:
 def embed_menu(emojis=False, winner=None):
     if winner:
         embed = discord.Embed(title="!!   Winner!  !!")
-        embed.set_thumbnail(url='https://discordapp.com/api/emojis/' +
-                            winner[0])
-    elif emojis:
+        embed.set_image(url=build_emoji_url(winner[0]))
+        embed.set_thumbnail(url=build_emoji_url(winner[0]))
+        return embed
+
+    if emojis:
         emojis = sorted(emojis.items(), key=lambda i: i[1], reverse=True)
-        embed = discord.Embed(title="Spam dem 'mojis!")
-        embed.set_image(url='https://discordapp.com/api/emojis/' + 
-                        emojis[0][0])
-        embed.set_thumbnail(url='https://discordapp.com/api/emojis/' +
-                            emojis[1][0])
-        embed.add_field(name="1st Place", value=str(emojis[0][1]), inline=True)
-        embed.add_field(name="2nd Place", value=str(emojis[1][1]), inline=True)
+        embed = discord.Embed(title="{:-^38}".format("Spam dem 'mojis!"))
+        embed.set_image(url=build_emoji_url(emojis[0][0]))
+        embed.set_thumbnail(url=build_emoji_url(emojis[1][0]))
     else:
         embed = discord.Embed(title="-  Choose a Racer!  -")
-        embed.add_field(name="1st Place", value=str(0), inline=True)
-        embed.add_field(name="2nd Place", value=str(0), inline=True)
+
+    embed.add_field(name="1st Place", value="V", inline=True)
+    embed.add_field(name="2nd Place", value=">", inline=True)
 
     return embed
 
 
+def build_emoji_url(emoji_filename):
+    return 'https://discordapp.com/api/emojis/' + emoji_filename
+
 def game_id(msg):
-    return msg.channel.id+'|'+msg.id
+    return msg.channel.id + '|' + msg.id
 
 def emoji_filename(emoji):
     return emoji.url[34:]
