@@ -56,7 +56,9 @@ class EmojiRace:
         await self.bot.say("Let the Games Begin!")
         await asyncio.sleep(120)
         try:
-            await self.end_game(self.settings[game_id(m)])
+            game = self.settings[game_id(m)]
+            await self.end_game(game)
+            await self.draw_game(game, over=True)
         except KeyError:
             pass
 
@@ -64,30 +66,37 @@ class EmojiRace:
         del self.settings[game_id(game['message'])]
 
     async def update_game(self, game):
-        for e in game['players']:
-            if game['emojis'][e] >= game['limit']:
-                await self.draw_winner(self.settings[game_id(game['message'])], e)
-                await self.end_game(game)
+        lead = self._get_lead(game)
+        if lead[1] >= game['limit']:
+            await self.end_game(game)
+            await self.draw_game(game, over=True)
+        else:
+            await self.draw_game(game)
 
-    async def draw_game(self, game):
+    async def draw_game(self, game, over=False):
         msg = game['message']
         # pts = [(p, game['emojis'][p]) for p in game['players']]
         emojis = sorted(game['emojis'].items(), key=lambda i: i[1], reverse=True)
 
-        s = ("GUUUUU!!\n|{:^22}"+" "*20+"{:^22}|").format(emojis[0][1], emojis[1][1])
-        if emojis[0][0] != game['drawn_lead']:
+        fmt = "{}\n|{:^22}" + " "*20 + "{:^22}|"
+        s = fmt.format("- Game Over! -" if over else "GUUUUU!!", emojis[0][1], emojis[1][1])
+        prev_lead = game['drawn_lead']
+        game['drawn_lead'] = emojis[0][0]
+        if over:
+            await self.draw_winner(game, s)
+        elif emojis[0][0] != prev_lead:
             e = embed_menu(game['emojis'])
             await self.bot.edit_message(msg, new_content=s, embed=e)
         else:
             await self.bot.edit_message(msg, new_content=s)
-        game['drawn_lead'] = emojis[0][0]
 
-    async def draw_winner(self, game, emoji_filename):
+    async def draw_winner(self, game, content):
         msg = game['message']
         winner = self._get_lead(game)
         embed = embed_menu(winner=winner)
-        await self.bot.edit_message(msg, embed=embed)
-        await self.bot.send_file(msg.channel, os.path.join(EMOJI_PATH, winner[0]))
+        await self.bot.edit_message(msg, new_content=content, embed=embed)
+        await self.bot.send_file(msg.channel, os.path.join(EMOJI_PATH, winner[0]),
+                                 content="Winrer!")
 
 
     def set_up_game(self, msg, p1e, p2e, limit=100):
@@ -129,9 +138,8 @@ class EmojiRace:
             return
         now = datetime.datetime.now()
         if (now - game["updated"]).seconds > 2:
-            await self.update_game(game)
-            await self.draw_game(game)
             game["updated"] = now
+            await self.update_game(game)
 
 
 def embed_menu(emojis=False, winner=None):
