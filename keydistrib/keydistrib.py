@@ -24,9 +24,9 @@ KEYS_PATH = "data/keydistrib/keys"
 #TODO:  if confirmed
 #TODO:  who gave the key
 #TODO:  userinfo: name/id/date
-#TODO: formattable msg per keyfile ex: "Welcome to the PICO-8 bootcamp! 
+#TODO: formattable msg per keyfile ex: "Welcome to the PICO-8 bootcamp!
 #           {sender.display_name} has sent you a PICO-8 key. Please click {key} and
-#           register to loxaloffle with an email account you have access to. 
+#           register to loxaloffle with an email account you have access to.
 #           Once you do that, you should recieve an email with the download link!
 #      see customcom.py (welcome.py original) for ex.
 #TODO: ^ have a default for that
@@ -46,8 +46,8 @@ KEYS_PATH = "data/keydistrib/keys"
 
 #---- settings format -----
 # Diagram: settings->(FILES->filepath->(SERVERS,KEYS->key), USERS->uid)
-# 
-# Actual: 
+#
+# Actual:
 #
 #settings = {
 #     "FILES": {
@@ -79,7 +79,7 @@ def update_keys(command, all_keys=False):
 
     def update_wrapper(*args, **kwargs):
         # instance is the cog instance
-        settings = command.instance.settings 
+        settings = command.instance.settings
         self = command.instance
         if all_keys:
             keyfiles = settings['FILES']
@@ -105,7 +105,7 @@ def update_keys(command, all_keys=False):
                 keyring["SERVERS"].append(server.id)
             #TODO: tell user it's done
         self._save()
-        
+
         return command(*args, **kwargs)
 
     return update_wrapper
@@ -243,7 +243,7 @@ class KeyDistrib:
         channel = ctx.message.channel
         author = ctx.message.author
         #TODO: "[p]distribset msg" by itself sets msg to default on confirmation.
-        #TODO: write this. 
+        #TODO: write this.
 
     @update_keys()
     @checks.mod_or_permissions()
@@ -277,7 +277,7 @@ def _name_to_path(name):
         return name
     name = name + '.txt'
     if os.path.exists(name):
-        return name 
+        return name
     raise FileNotFoundError('No such file: ' + name)
 
 
