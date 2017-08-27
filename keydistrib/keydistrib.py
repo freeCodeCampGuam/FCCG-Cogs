@@ -80,11 +80,11 @@ def update_keys(command, all_keys=False):
     def update_wrapper(*args, **kwargs):
         # instance is the cog instance
         settings = command.instance.settings 
-        self = args[0]
+        self = command.instance
         if all_keys:
-            keyfiles = [*settings['FILES']]
+            keyfiles = settings['FILES']
         else:
-            keyfiles = [args[2]]
+            keyfiles = {args[2]: settings['FILES'][args[2]]}
         for name, keyring in keyfiles:
             try:
                 path = _name_to_path(name)
