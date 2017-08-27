@@ -75,6 +75,7 @@ KEYS_PATH = "data/keydistrib/keys"
 
 def update_keys(command, all_keys=False):
     """assumes 3rd arg is name
+    updates all keyfiles or only the name (3rd arg)
     """
 
     def update_wrapper(*args, **kwargs):
