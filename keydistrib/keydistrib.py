@@ -155,12 +155,13 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def _get_key(self, name):
+    def _get_key(self, name server):
         """ retrieves an available key within the settings file. """
         self._update_keys(name)
         keys = self.settings["FILES"][name]["KEYS"]
+        server_list = self.settings["FILES"][name]["SERVERS"]
         for key in keys:
-            if key is None:
+            if key is None and if server in server_list:
                 return key
         raise KeyError("No available keys. Please notify your server admin and try again.")
 
@@ -229,7 +230,7 @@ class KeyDistrib:
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
-        key = self._get_key(name)
+        key = self._get_key(name, server)
         #TODO: send user confirmation prompt
         message = await self.bot.whisper("Accept {} key?(yes/no)".format(name))
         reply = self.wait_for_message(15, author=message.author, channel=message.channel)
