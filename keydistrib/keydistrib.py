@@ -161,7 +161,7 @@ class KeyDistrib:
         keys = self.settings["FILES"][name]["KEYS"]
         server_list = self.settings["FILES"][name]["SERVERS"]
         for key in keys:
-            if key is None and if server in server_list:
+            if key is None and server in server_list:
                 return key
         raise KeyError("No available keys. Please notify your server admin and try again.")
 
