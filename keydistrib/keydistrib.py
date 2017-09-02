@@ -55,7 +55,7 @@ KEYS_PATH = "data/keydistrib/keys"
 #             "SERVERS": ["sid"],
 #             "KEYS": {
 #                 "key": {
-#                     "STATUS": "UNUSED"/"USED",
+#                     "STATUS": "IN-PROGRESS"/"USED",
 #                     "DATE": timestamp (update to last action)
 #                     "RECIPIENT": {"NAME": "bob", "UID": "uid"},
 #                     "SENDER": "uid"
@@ -103,7 +103,7 @@ class KeyDistrib:
             if key in keys_in_settings:
                 if keys_in_settings[key] is None:
                     del keys_in_settings[key]
-                elif keys_in_settings[key]["STATUS"] == "UNUSED":
+                elif keys_in_settings[key]["STATUS"] != "USED":
                     del keys_in_settings[key]
             else:  # add it
                 keys_in_settings[key] = None
