@@ -108,6 +108,15 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
+    def _get_key(self, name):
+        """ retrieves an available key within the settings file. """
+        self._update_keys(name)
+        keys = self.settings["FILES"][file_path]["KEYS"]
+        for key in keys:
+            if key is None:
+                return key
+        raise KeyError("No available keys. Please notify your server admin and try again.")
+
     def new_keyring(self, server, file_path):
         with open(file_path) as f:
             contents = f.read()
@@ -161,7 +170,7 @@ class KeyDistrib:
         if mtime != keyring["DATE_MODIFIED"]:
             # removes non-existing unused keys
             # adds new keys
-            self._update_keys(file_path, keys)
+            self._update_keys(name)
 
         if server.id not in keyring["SERVERS"]:
             keyring["SERVERS"].append(server.id)
@@ -214,7 +223,7 @@ class KeyDistrib:
         channel = ctx.message.channel
         author = ctx.message.author
         #TODO: send user confirmation prompt
-        await self.bot.whisper("")
+        await self.bot.whisper("Want a k")
 
 
 
