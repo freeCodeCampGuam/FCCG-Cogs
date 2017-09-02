@@ -51,17 +51,18 @@ KEYS_PATH = "data/keydistrib/keys"
 #
 #settings = {
 #     "FILES": {
-#         "filepath": {
+#         "keyfile_name": {
 #             "SERVERS": ["sid"],
 #             "KEYS": {
 #                 "key": {
-#                     "STATUS": "UNUSED"/"USED",
+#                     "STATUS": "IN-PROGRESS"/"USED",
 #                     "DATE": timestamp (update to last action)
 #                     "RECIPIENT": {"NAME": "bob", "UID": "uid"},
 #                     "SENDER": "uid"
 #                 }
 #             },
-#             "DATE_MODIFIED": timestamp
+#             "DATE_MODIFIED": timestamp,
+#             "MESSAGE": "msg"  # later restructure SERVERS with this
 #         }
 #     },
 #     "USERS": {
@@ -72,6 +73,9 @@ KEYS_PATH = "data/keydistrib/keys"
 #     }
 # }
 #
+
+class KeyringExists(Exception):
+    pass
 
 
 class KeyFileName(commands.Converter):
@@ -93,17 +97,60 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-    def _update_keys(self, file_path, keys):
-        """ this function deletes unused keys in settings file. 
+    def _update_file(self, keyfile_name=None):
+        """Update memory to match keyfile, given its keyfile_name.
+
+        if none given, updates for every keyfile in memory
+        """
+        settings = self.settings
+        server = ctx.message.server
+        if keyfile_name is None:
+            keyfiles = settings['FILES']
+        else:
+            keyfiles = {keyfile_name: settings['FILES'][keyfile_name]}
+        for name, keyring in keyfiles.items():
+            # only update the keys if they are available in this server
+            if server.id not in keyring['SERVERS']:
+                continue
+            try:
+                path = _name_to_path(name)
+            except FileNotFoundError as e:
+                # if it was a bogus name, just quit
+                # if name not in settings['FILES']:
+                #     raise e
+                # actually, it'll raise a keyerror before this
+
+                # otherwise, make sure to remove the unused keys
+                # I guess for now this will keep running until a file
+                # gets added. change that later
+                self._update_keys(name)
+                self._save()
+            else:
+                mtime = os.path.getmtime(path)
+                # if mtime is different, we update.
+                # what if our mtime is newer than file's?
+                #TODO: prompt user?
+                # even if our memory is newer than the file at the path now, 
+                # still update (to remove the unused keys)
+                if mtime != keyring["DATE_MODIFIED"]:
+                    # removes non-existing unused keys
+                    # adds new keys
+                    #TODO: write this
+                    self._update_keys(name)
+                    self._save()
+            #TODO: tell user it's done
+
+    def _update_keys(self, keyfile_name):
+        """ this function deletes unused keys in settings. 
         Otherwise, if it is a newly added key to the
         keys file, it initializes it to None. """
-        keys_in_settings = self.settings["FILES"][file_path]["KEYS"]
+        keys_in_settings = self.settings["FILES"][keyfile_name]["KEYS"]
         keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
         for key in keys_difference:
             if key in keys_in_settings:
                 if keys_in_settings[key] is None:
                     del keys_in_settings[key]
-                elif keys_in_settings[key]["STATUS"] == "UNUSED":
+                elif keys_in_settings[key]["STATUS"] != "USED":
                     del keys_in_settings[key]
             else:  # add it
                 keys_in_settings[key] = None
@@ -117,13 +164,17 @@ class KeyDistrib:
                 return key
         raise KeyError("No available keys. Please notify your server admin and try again.")
 
-    def new_keyring(self, server, file_path):
-        with open(file_path) as f:
+    def new_keyring(self, server, keyfile_name):
+        if keyfile_name in self.settings["FILES"]:
+            raise KeyringExists('{} is already registered as a keyring'
+                                .format(keyfile_name))
+        path = _name_to_path(keyfile_name)
+        with open(path) as f:
             contents = f.read()
         keys = filter(None, contents.splitlines())
         mtime = os.path.getmtime(path)
 
-        keyring = self.settings["FILES"].setdefault(file_path, {
+        keyring = self.settings["FILES"].setdefault(keyfile_name, {
             "SERVERS": [server.id],
             "KEYS": {k: None for k in keys},
             "DATE_MODIFIED": mtime
@@ -140,62 +191,18 @@ class KeyDistrib:
             await send_cmd_help(ctx)
 
     @checks.is_owner()
-    @distribset.command(pass_context=True, name="file", no_pm=True)
-    async def distribset_file(self, ctx, name: KeyFileName):
-        """Set file to read keys from.
-        Relative from data/keydistrib/
-        Absolute filepaths work as well
-
-        #TODO: describe file format here"""
-        server = ctx.message.server
-        if not os.path.isabs(file_path):
-            file_path = 'data/keydistrib/' + file_path
-        if not os.path.exists(file_path):
-            await self.bot.say("The specified file does not exist.")
-            return
-
-        # open file containing keys
-        with open(file_path) as f:
-            contents = f.read()
-        keys = filter(None, contents.splitlines())
-        mtime = os.path.getmtime(file_path)
-        # Returns indicated file_path dict. If file doesn't exist, it is added
-        keyring = self.settings["FILES"].setdefault(file_path, {
-            "SERVERS": [server.id],
-            "KEYS": {k: None for k in keys},
-            "DATE_MODIFIED": mtime
-        })
-        # what if our mtime is newer than file's?
-        #TODO: prompt user?
-        if mtime != keyring["DATE_MODIFIED"]:
-            # removes non-existing unused keys
-            # adds new keys
-            self._update_keys(name)
-
-        if server.id not in keyring["SERVERS"]:
-            keyring["SERVERS"].append(server.id)
-
-        self._save()
-        await self.bot.reply("Keys are ready to be sent.")
-
-    @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
     async def distribset_toggle(self, ctx, name: KeyFileName):
         """#TODO: description"""
         server = ctx.message.server
 
-        file_path = _name_to_path(name)
-
         try:
-            keyring = self.settings["FILES"][file_path]
+            keyring = self.settings["FILES"][name]
         except KeyError:  # keyring doesn't exist. this is a new file
-            keyring = self.new_keyring(server, file_path)
-
-            await self.bot.say("That file has not been added yet.\n"
-                               "Add it with `{}distribset file`"
-                               .format(ctx.prefix))
-            return
-
+            keyring = self.new_keyring(server, name)
+            return await self.bot.reply("New keyfile, {}, added. Keys from that file "
+                                        "can now be distributed in this server"
+                                        .format(name))
         try:
             keyring["SERVERS"].remove(server.id)
             msg = "Keys from that file can no longer be distributed in this server"
@@ -256,7 +263,7 @@ def check_folders():
 
 
 def check_files():
-    default = {}
+    default = {"FILES": {}, "USERS": {}, "TRANSACTIONS": {}}
 
     if not dataIO.is_valid_json(SETTINGS_PATH):
         print("Creating default keydistrib settings.json...")
