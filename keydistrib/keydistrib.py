@@ -181,45 +181,6 @@ class KeyDistrib:
             await send_cmd_help(ctx)
 
     @checks.is_owner()
-    @distribset.command(pass_context=True, name="file", no_pm=True)
-    async def distribset_file(self, ctx, name: KeyFileName):
-        """Set file to read keys from.
-        Relative from data/keydistrib/
-        Absolute filepaths work as well
-
-        #TODO: describe file format here"""
-        server = ctx.message.server
-        if not os.path.isabs(file_path):
-            file_path = 'data/keydistrib/' + file_path
-        if not os.path.exists(file_path):
-            await self.bot.say("The specified file does not exist.")
-            return
-
-        # open file containing keys
-        with open(file_path) as f:
-            contents = f.read()
-        keys = filter(None, contents.splitlines())
-        mtime = os.path.getmtime(file_path)
-        # Returns indicated file_path dict. If file doesn't exist, it is added
-        keyring = self.settings["FILES"].setdefault(file_path, {
-            "SERVERS": [server.id],
-            "KEYS": {k: None for k in keys},
-            "DATE_MODIFIED": mtime
-        })
-        # what if our mtime is newer than file's?
-        #TODO: prompt user?
-        if mtime != keyring["DATE_MODIFIED"]:
-            # removes non-existing unused keys
-            # adds new keys
-            self._update_keys(file_path, keys)
-
-        if server.id not in keyring["SERVERS"]:
-            keyring["SERVERS"].append(server.id)
-
-        self._save()
-        await self.bot.reply("Keys are ready to be sent.")
-
-    @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
     async def distribset_toggle(self, ctx, name: KeyFileName):
         """#TODO: description"""
@@ -231,12 +192,8 @@ class KeyDistrib:
             keyring = self.settings["FILES"][file_path]
         except KeyError:  # keyring doesn't exist. this is a new file
             keyring = self.new_keyring(server, file_path)
-
-            await self.bot.say("That file has not been added yet.\n"
-                               "Add it with `{}distribset file`"
-                               .format(ctx.prefix))
-            return
-
+            return self.bot.reply("New keyfile, {}, added. Keys from that file "
+                                  "can now be distributed in this server")
         try:
             keyring["SERVERS"].remove(server.id)
             msg = "Keys from that file can no longer be distributed in this server"
