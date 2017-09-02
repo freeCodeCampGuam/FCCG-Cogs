@@ -108,6 +108,8 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
+    
+
     def _get_key(self, name):
         """ retrieves an available key within the settings file. """
         self._update_keys(name)
@@ -217,15 +219,18 @@ class KeyDistrib:
 
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
-    async def givekey(self, ctx, name: KeyFileName, user: discord.Member):
+    async def give_key(self, ctx, name: KeyFileName, user: discord.Member):
         """Give a member a key"""
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
+        key = self._get_key(name)
         #TODO: send user confirmation prompt
-        await self.bot.whisper("Want a k")
-
-
+        message = await self.bot.whisper("Accept {} key?(yes/no)".format(name))
+        reply = self.wait_for_message(15, author=message.author, channel=message.channel)
+        if reply.content.lower() == "yes":
+            await self.bot.whisper(key)
+            _update_key_info()
 
 def _name_to_path(name):
     """converts a keyfile name to a path to it
