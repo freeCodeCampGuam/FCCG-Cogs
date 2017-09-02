@@ -108,12 +108,10 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    
-
     def _get_key(self, name):
         """ retrieves an available key within the settings file. """
         self._update_keys(name)
-        keys = self.settings["FILES"][file_path]["KEYS"]
+        keys = self.settings["FILES"][name]["KEYS"]
         for key in keys:
             if key is None:
                 return key
