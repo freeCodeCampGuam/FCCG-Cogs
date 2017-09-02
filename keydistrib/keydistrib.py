@@ -96,6 +96,49 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
+    def _update_file(self, keyfile_name=None):
+        """Update memory to match keyfile, given its keyfile_name.
+
+        if none given, updates for every keyfile in memory
+        """
+        settings = self.settings
+        server = ctx.message.server
+        if keyfile_name is None:
+            keyfiles = settings['FILES']
+        else:
+            keyfiles = {keyfile_name: settings['FILES'][keyfile_name]}
+        for name, keyring in keyfiles.items():
+            # only update the keys if they are available in this server
+            if server.id not in keyring['SERVERS']:
+                continue
+            try:
+                path = _name_to_path(name)
+            except FileNotFoundError as e:
+                # if it was a bogus name, just quit
+                # if name not in settings['FILES']:
+                #     raise e
+                # actually, it'll raise a keyerror before this
+
+                # otherwise, make sure to remove the unused keys
+                # I guess for now this will keep running until a file
+                # gets added. change that later
+                self._update_keys(name)
+                self._save()
+            else:
+                mtime = os.path.getmtime(path)
+                # if mtime is different, we update.
+                # what if our mtime is newer than file's?
+                #TODO: prompt user?
+                # even if our memory is newer than the file at the path now, 
+                # still update (to remove the unused keys)
+                if mtime != keyring["DATE_MODIFIED"]:
+                    # removes non-existing unused keys
+                    # adds new keys
+                    #TODO: write this
+                    self._update_keys(name)
+                    self._save()
+            #TODO: tell user it's done
+
     def _update_keys(self, keyfile_name):
         """ this function deletes unused keys in settings. 
         Otherwise, if it is a newly added key to the
