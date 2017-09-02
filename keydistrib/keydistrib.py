@@ -190,9 +190,10 @@ class KeyDistrib:
         try:
             keyring = self.settings["FILES"][name]
         except KeyError:  # keyring doesn't exist. this is a new file
-            return self.bot.reply("New keyfile, {}, added. Keys from that file "
             keyring = self.new_keyring(server, name)
-                                  "can now be distributed in this server")
+            return await self.bot.reply("New keyfile, {}, added. Keys from that file "
+                                        "can now be distributed in this server"
+                                        .format(name))
         try:
             keyring["SERVERS"].remove(server.id)
             msg = "Keys from that file can no longer be distributed in this server"
