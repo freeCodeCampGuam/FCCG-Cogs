@@ -159,7 +159,7 @@ class KeyDistrib:
         if keyfile_name in self.settings["FILES"]:
             raise KeyringExists('{} is already registered as a keyring'
                                 .format(keyfile_name))
-        path = self._name_to_path(keyfile_name)
+        path = _name_to_path(keyfile_name)
         with open(path) as f:
             contents = f.read()
         keys = filter(None, contents.splitlines())
@@ -187,13 +187,11 @@ class KeyDistrib:
         """#TODO: description"""
         server = ctx.message.server
 
-        file_path = _name_to_path(name)
-
         try:
-            keyring = self.settings["FILES"][file_path]
+            keyring = self.settings["FILES"][name]
         except KeyError:  # keyring doesn't exist. this is a new file
-            keyring = self.new_keyring(server, file_path)
             return self.bot.reply("New keyfile, {}, added. Keys from that file "
+            keyring = self.new_keyring(server, name)
                                   "can now be distributed in this server")
         try:
             keyring["SERVERS"].remove(server.id)
@@ -252,7 +250,7 @@ def check_folders():
 
 
 def check_files():
-    default = {}
+    default = {"FILES": {}, "USERS": {}, "TRANSACTIONS": {}}
 
     if not dataIO.is_valid_json(SETTINGS_PATH):
         print("Creating default keydistrib settings.json...")
