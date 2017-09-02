@@ -51,7 +51,7 @@ KEYS_PATH = "data/keydistrib/keys"
 #
 #settings = {
 #     "FILES": {
-#         "filepath": {
+#         "keyfile_name": {
 #             "SERVERS": ["sid"],
 #             "KEYS": {
 #                 "key": {
@@ -93,11 +93,11 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-    def _update_keys(self, file_path, keys):
-        """ this function deletes unused keys in settings file. 
+    def _update_keys(self, keyfile_name):
+        """ this function deletes unused keys in settings. 
         Otherwise, if it is a newly added key to the
         keys file, it initializes it to None. """
-        keys_in_settings = self.settings["FILES"][file_path]["KEYS"]
+        keys_in_settings = self.settings["FILES"][keyfile_name]["KEYS"]
         keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
         for key in keys_difference:
             if key in keys_in_settings:
@@ -108,13 +108,14 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def new_keyring(self, server, file_path):
-        with open(file_path) as f:
+    def new_keyring(self, server, keyfile_name):
+        path = self._name_to_path(keyfile_name)
+        with open(path) as f:
             contents = f.read()
         keys = filter(None, contents.splitlines())
         mtime = os.path.getmtime(path)
 
-        keyring = self.settings["FILES"].setdefault(file_path, {
+        keyring = self.settings["FILES"].setdefault(keyfile_name, {
             "SERVERS": [server.id],
             "KEYS": {k: None for k in keys},
             "DATE_MODIFIED": mtime
