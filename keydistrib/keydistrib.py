@@ -61,7 +61,8 @@ KEYS_PATH = "data/keydistrib/keys"
 #                     "SENDER": "uid"
 #                 }
 #             },
-#             "DATE_MODIFIED": timestamp
+#             "DATE_MODIFIED": timestamp,
+#             "MESSAGE": "msg"  # later restructure SERVERS with this
 #         }
 #     },
 #     "USERS": {
