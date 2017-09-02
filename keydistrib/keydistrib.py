@@ -73,6 +73,9 @@ KEYS_PATH = "data/keydistrib/keys"
 # }
 #
 
+class KeyringExists(Exception):
+    pass
+
 
 class KeyFileName(commands.Converter):
     def convert(self):
@@ -109,6 +112,9 @@ class KeyDistrib:
                 keys_in_settings[key] = None
 
     def new_keyring(self, server, keyfile_name):
+        if keyfile_name in self.settings["FILES"]:
+            raise KeyringExists('{} is already registered as a keyring'
+                                .format(keyfile_name))
         path = self._name_to_path(keyfile_name)
         with open(path) as f:
             contents = f.read()
