@@ -187,14 +187,14 @@ class KeyDistrib:
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
-        """#TODO: description"""
+        """Key distribution settings"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
     @checks.is_owner()
     @distribset.command(pass_context=True, name="toggle", no_pm=True)
     async def distribset_toggle(self, ctx, name: KeyFileName):
-        """#TODO: description"""
+        """Toggle availability of a key file in this server"""
         server = ctx.message.server
 
         try:
