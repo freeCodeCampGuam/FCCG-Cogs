@@ -285,10 +285,10 @@ class KeyDistrib:
         message = await self.bot.whisper("{} in the {} server is giving you a "
                                          "{} key. Accept it?(yes/no)"
                                          .format(author.display_name, server.name, name))
-        reply = self.wait_for_message(15, author=message.author, channel=message.channel)
-        if reply and reply.content.lower() == "yes":
-            await self.bot.whisper(self._generate_key_msg(author, name, key))
-            _update_key_info()
+        reply = await self.bot.wait_for_message(15, author=user, channel=message.channel)
+        if reply and reply.content.lower()[0] == "y":
+            await self.bot.send_message(user, self._generate_key_msg(author, name, key))
+            #_update_key_info()
 
 def _name_to_path(name):
     """converts a keyfile name to a path to it
