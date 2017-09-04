@@ -38,7 +38,11 @@ class BBS:
             "MUSIC":         "11"
         },
         "orderby": {
-            "":              "ts"
+            "RECENT":        "ts",
+            "FEATURED":      "rating",  
+            "RATING":        "rating",
+            "FAVORITES":     "favourites",
+            "FAVOURITES":    "favourites"
         }
     }
 
