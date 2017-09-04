@@ -146,6 +146,7 @@ class KeyDistrib:
         Otherwise, if it is a newly added key to the
         keys file, it initializes it to None. """
         keys_in_settings = self.settings["FILES"][keyfile_name]["KEYS"]
+        keys = self._get_keys_from_file(keyfile_name)
         keys_difference = set(keys_in_settings).symmetric_difference(set(keys))
         for key in keys_difference:
             if key in keys_in_settings:
@@ -181,10 +182,8 @@ class KeyDistrib:
         if keyfile_name in self.settings["FILES"]:
             raise KeyringExists('{} is already registered as a keyring'
                                 .format(keyfile_name))
+        keys = self._get_keys_from_file(keyfile_name)
         path = _name_to_path(keyfile_name)
-        with open(path) as f:
-            contents = f.read()
-        keys = filter(None, contents.splitlines())
         mtime = os.path.getmtime(path)
 
         keyring = self.settings["FILES"].setdefault(keyfile_name, {
@@ -196,6 +195,12 @@ class KeyDistrib:
 
         self._save()
         return keyring
+
+    def _get_keys_from_file(self, keyfile_name):
+        path = _name_to_path(keyfile_name)
+        with open(path) as f:
+            contents = f.read()
+        return list(filter(None, contents.splitlines()))
 
     def _generate_key_msg(self, presenter, file, key):
         """
