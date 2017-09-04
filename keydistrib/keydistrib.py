@@ -155,13 +155,13 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def _get_key(self, name server):
+    def _get_key(self, name, server):
         """ retrieves an available key within the settings file. """
         self._update_keys(name)
         keys = self.settings["FILES"][name]["KEYS"]
         server_list = self.settings["FILES"][name]["SERVERS"]
-        for key in keys:
-            if key is None and server in server_list:
+        for key, meta in keys.items():
+            if meta is None and server.id in server_list:
                 return key
         raise KeyError("No available keys. Please notify your server admin and try again.")
 
