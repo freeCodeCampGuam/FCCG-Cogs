@@ -12,6 +12,7 @@ from __main__ import send_cmd_help
 
 SETTINGS_PATH = "data/keydistrib/settings.json"
 KEYS_PATH = "data/keydistrib/keys"
+DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 
 
 #TODO: 1st phase
@@ -189,7 +190,8 @@ class KeyDistrib:
         keyring = self.settings["FILES"].setdefault(keyfile_name, {
             "SERVERS": [server.id],
             "KEYS": {k: None for k in keys},
-            "DATE_MODIFIED": mtime
+            "DATE_MODIFIED": mtime,
+            "MESSAGE": DEFAULT_MSG
         })
 
         self._save()
@@ -236,12 +238,35 @@ class KeyDistrib:
 
     @distribset.command(pass_context=True, name="msg", aliases=["message"], no_pm=True)
     async def distribset_msg(self, ctx, name: KeyFileName, msg=None):
-        """#TODO: description"""
+        """Set the message to be given to whispered to the user."""
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
-        #TODO: "[p]distribset msg" by itself sets msg to default on confirmation.
-        #TODO: write this. 
+        #TODO: Make server-specific
+        #TODO: Make customizable agreement msg too
+        if not self._can_get_key(name, server):
+            return await self.bot.say("This server isn't allowed to "
+                                      "generate keys for that keyfile")
+
+        msg = msg or DEFAULT_MSG
+        keyring = self.settings['FILES'][name]
+
+        keyring["MESSAGE"], oldmsg = msg, keyring["MESSAGE"]
+
+        msg = self._generate_key_msg(author, name, "1TEST2THIS3IS4A5FAKE6KEY")
+        await self.bot.say(msg)
+        await self.bot.say("**^ This is what the user will receive. "
+                           "Is this what you want? (yes/no)**")
+
+        answer = await self.bot.wait_for_message(timeout=60, author=author, channel=channel)
+        if answer and answer.content.lower()[0] == 'y':
+            await self.bot.say("Message set for {}".format(name))
+            self._save()
+        else:
+            keyring["MESSAGE"] = oldmsg
+            msg = "Message unchanged" if answer else "No response.. Message unchanged"
+            await self.bot.say(msg)
+
 
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
