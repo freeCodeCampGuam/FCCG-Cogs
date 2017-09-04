@@ -184,6 +184,15 @@ class KeyDistrib:
         self._save()
         return keyring
 
+    def _generate_key_msg(self, presenter, file, key):
+        """
+        generates the msg to send to the recipient
+        given the presenter, file, and key
+
+        doesn't check if server is allowed to generate a key"""
+        return (self.settings['FILES'][file]['MESSAGE']
+                .format(presenter=presenter, file=file, key=key))
+
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
@@ -235,7 +244,7 @@ class KeyDistrib:
         message = await self.bot.whisper("Accept {} key?(yes/no)".format(name))
         reply = self.wait_for_message(15, author=message.author, channel=message.channel)
         if reply.content.lower() == "yes":
-            await self.bot.whisper(key)
+            await self.bot.whisper(self._generate_key_msg(author, name, key))
             _update_key_info()
 
 def _name_to_path(name):
