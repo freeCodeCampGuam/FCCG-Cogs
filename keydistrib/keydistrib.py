@@ -279,7 +279,7 @@ class KeyDistrib:
         #TODO: send user confirmation prompt
         message = await self.bot.whisper("Accept {} key?(yes/no)".format(name))
         reply = self.wait_for_message(15, author=message.author, channel=message.channel)
-        if reply.content.lower() == "yes":
+        if reply and reply.content.lower() == "yes":
             await self.bot.whisper(self._generate_key_msg(author, name, key))
             _update_key_info()
 
