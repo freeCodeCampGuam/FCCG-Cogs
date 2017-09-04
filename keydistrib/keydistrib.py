@@ -280,6 +280,10 @@ class KeyDistrib:
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
+
+        if author is user:
+            return await self.bot.say("What are you doing :neutral_face:")
+
         key = self._get_key(name, server)
         #TODO: send user confirmation prompt
         message = await self.bot.whisper("{} in the {} server is giving you a "
