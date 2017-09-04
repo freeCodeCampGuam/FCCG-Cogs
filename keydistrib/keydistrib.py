@@ -169,7 +169,12 @@ class KeyDistrib:
         raise KeyError("No available keys. Please notify your server admin and try again.")
 
     def _can_get_key(self, name, server):
-        return server.id in self.settings['FILES'][name]['SERVERS']
+        """whether or not a keyfile is accessible to this server"""
+        try:
+            keyring = self.settings['FILES'][name]
+        except:
+            return False
+        return server.id in keyring['SERVERS']
 
     def new_keyring(self, server, keyfile_name):
         if keyfile_name in self.settings["FILES"]:
