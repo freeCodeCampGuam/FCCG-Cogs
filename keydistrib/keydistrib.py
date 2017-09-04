@@ -156,14 +156,20 @@ class KeyDistrib:
                 keys_in_settings[key] = None
 
     def _get_key(self, name, server):
-        """ retrieves an available key within the settings file. """
+        """ retrieves an available key within the settings file. 
+        Raises KeyError if not allowed or no keys available."""
+        if not self._can_get_key(name, server):
+            raise KeyError("The {} keyfile isn't turned on in this server."
+                           .format(name))
         self._update_keys(name)
         keys = self.settings["FILES"][name]["KEYS"]
-        server_list = self.settings["FILES"][name]["SERVERS"]
         for key, meta in keys.items():
-            if meta is None and server.id in server_list:
+            if meta is None:
                 return key
         raise KeyError("No available keys. Please notify your server admin and try again.")
+
+    def _can_get_key(self, name, server):
+        return server.id in self.settings['FILES'][name]['SERVERS']
 
     def new_keyring(self, server, keyfile_name):
         if keyfile_name in self.settings["FILES"]:
