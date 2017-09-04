@@ -160,10 +160,10 @@ class KeyDistrib:
     def _get_key(self, name, server):
         """ retrieves an available key within the settings file. 
         Raises KeyError if not allowed or no keys available."""
+        self._update_file(name)
         if not self._can_get_key(name, server):
             raise KeyError("The {} keyfile isn't turned on in this server."
                            .format(name))
-        self._update_keys(name)
         keys = self.settings["FILES"][name]["KEYS"]
         for key, meta in keys.items():
             if meta is None:
