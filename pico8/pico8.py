@@ -73,13 +73,26 @@ class BBS:
     async def get_post(self, index_or_post):
         try:
             index = self.posts.index(index_or_post)
+    def _get_post_index(self, index_or_id):
         except ValueError:
             index = index_or_post
         raw = await self._get_post(index)
         soup = BeautifulSoup(raw, "html.parser")
         # continue
 
-    async def _get_post(self, index):
+    def _get_post_index(self, index_or_id):
+        try:
+            self.posts[index_or_id]
+        except TypeError:
+            for n, p in enumerate(self.posts):
+                if p["PARAM"]['tid'] == index_or_id:
+                    return n
+        else:
+            return index_or_id
+        raise KeyError('index does not exist in posts')
+
+    async def _get_post(self, index_or_id):
+        index = self._get_post_index(index_or_id)
         post = self.posts[index]
         return self._get(post[1])
 
