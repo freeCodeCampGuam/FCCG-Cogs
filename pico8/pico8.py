@@ -223,6 +223,7 @@ class Pico8:
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
+        self.searches = []
 
     @commands.group(pass_context=True, no_pm=True, aliases=['pico8'])
     async def bbs(self, ctx):
@@ -231,7 +232,7 @@ class Pico8:
             await send_cmd_help(ctx)
 
     @bbs.command(pass_context=True, name="search", no_pm=True)
-    async def bbs_search(self, ctx, category="Recent", search_terms=""):
+    async def bbs_search(self, ctx, search_terms=""):  # category="Recent",
         """Search PICO-8's bbs in a certain category
 
         Categories (default Recent):
@@ -243,6 +244,12 @@ class Pico8:
         leave search_term blank to list newest topics
         in the category
         """
+        author = ctx.message.author
+        async with BBS(self.bot.loop, search_terms) as bbs:
+            self.searches.append(bbs)
+            answer = await self.bot.wait_for_message(timeout=30,
+                                                     author=author, content="done")
+
 def check_folders():
     paths = ("data/pico8", )
     for path in paths:
