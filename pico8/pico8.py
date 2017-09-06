@@ -57,9 +57,11 @@ class BBS:
     def set_search(self, term):
         self.params.update({'search': term})
 
-    async def search(self, term):
+    async def search(self, term, orderby="RECENT"):
         self.set_search(term)
         self._populate_results()
+        self.set_param("orderby", orderby)
+
         return self.posts
 
     async def _populate_results(self):
