@@ -59,8 +59,8 @@ class BBS:
 
     async def search(self, term, orderby="RECENT"):
         self.set_search(term)
-        self._populate_results()
         self.set_param("orderby", orderby)
+        await self._populate_results()
 
         return self.posts
 
@@ -89,7 +89,7 @@ class BBS:
             return await r.text()
 
     def set_param(self, param, value_name):
-        self.params[param] = get_value(param, value_name)
+        self.params[param] = self.get_value(param, value_name)
 
     def set_param_by_prefix(self, param, prefix):
         value_name = self.get_value_name_by_prefix(param, prefix)
