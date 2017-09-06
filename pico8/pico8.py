@@ -46,13 +46,25 @@ class BBS:
         }
     }
 
-    def __init__(self, params={}):
+    def __init__(self, loop, search, orderby="RECENT", params={}):
         self.url = BBS.BASE
+        self.search_term = search
+        self.loop = loop
+        self.orderby = orderby
         self.params = {}
-        self.set_param("orderby", "")
-        self.posts = []
-        for p, v in params.items():
+        for p, v in self.params.items():
             self.set_param(p, v)
+        self.posts = []
+        self.current_post = 0
+        self.queue = []
+
+    async def __aenter__(self):
+        self.runner = self.loop.create_task(self._queue_runner())
+        await self.search(self.search_term, self.orderby)
+        return self
+
+    async def __aexit__(self, *args):
+        self.runner.cancel()
 
     def set_search(self, term):
         self.params.update({'search': term})
@@ -68,17 +80,27 @@ class BBS:
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
         posts = soup.find_all(id=re.compile("pdat_.*"))
-        self.posts = [[t.a.text, t.a['href']] for t in posts]
+        self.posts = [{"TITLE": t.a.text,
+                       "STATUS": "",
+                       "PARAM": {"tid": t.a['href'][5:]}} for t in posts]
+        await self._populate_post(0)
+        self.queue = [0,-1,1]
 
-    async def get_post(self, index_or_post):
+    async def _populate_post(self, index_or_id, post=None):
+        # hope this doesn't fail
+        post = post or self.posts[self._get_post_index(index_or_id)]
+        post['STATUS'] = 'processing'
         try:
-            index = self.posts.index(index_or_post)
-    def _get_post_index(self, index_or_id):
-        except ValueError:
-            index = index_or_post
-        raw = await self._get_post(index)
-        soup = BeautifulSoup(raw, "html.parser")
-        # continue
+            index = self._get_post_index(index_or_id)
+            raw = await self._get_post(index)
+            soup = BeautifulSoup(raw, "html.parser")
+            # continue
+            post['SOUP'] = soup
+        except Exception as e:
+            post['STATUS'] = 'failed'
+            raise e
+        post['STATUS'] = 'success'
+
 
     def _get_post_index(self, index_or_id):
         try:
@@ -94,12 +116,29 @@ class BBS:
     async def _get_post(self, index_or_id):
         index = self._get_post_index(index_or_id)
         post = self.posts[index]
-        return self._get(post[1])
+        param = post["PARAM"]
+        return await self._get(param)
 
     async def _get(self, params=None):
         params = params or self.params
         async with aiohttp.get(self.url, params=params) as r:
             return await r.text()
+
+    async def _queue_runner(self):
+        while True:
+            if self.queue:
+                working_group = []
+                for i in self.queue[:]:
+                    status = self.posts[i]["STATUS"]
+                    if status == 'success':
+                        self.queue.remove(i)
+                    if status in ('', 'failed'):
+                        working_group.append(i)
+                for i in working_group:
+                    self.loop.create_task(self._populate_post(i))
+            await asyncio.sleep(.5) 
+
+
 
     def set_param(self, param, value_name):
         self.params[param] = self.get_value(param, value_name)
@@ -131,6 +170,11 @@ class BBS:
 
         raise ValueError('Prefix {} not found in param {}'
                          .format(prefix, param))
+
+    def add_to_queue(self, post):
+        if post in self.queue:
+            return False
+        self.queue.append(post)
 
 # [{'href':t.a['href'], 'text':t.a.text}  for t in s.find_all(id=re.compile("pdat_.*"))]
 
