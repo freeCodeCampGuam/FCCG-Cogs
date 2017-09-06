@@ -155,6 +155,21 @@ Other:
     tags
     date
 
+
+Card:
+    [Title](link to post)    author.avatar
+    Description
+
+    Cart Name           Tags:
+    by author           tags, tags, tags
+
+    Cart thumbnail (or png cart?) or default "no cart" logo
+
+    footer: date, CC, hearts, starts
+
+    controls:
+    < x >
+
 """
 
 
