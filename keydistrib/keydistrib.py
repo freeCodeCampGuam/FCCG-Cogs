@@ -157,7 +157,7 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def _update_key_info(self, name, recipient, r_id, s_id, key):
+    def _update_key_info(self, *, keyfile_name, recipient, recipient_id, sender_id, key):
         """ updates information about the specified key after a
         give_key() instance. """
         key_info = self.settings["FILES"][name]["KEYS"]["key"]
@@ -303,7 +303,8 @@ class KeyDistrib:
         reply = await self.bot.on_message(120, author=user, channel=message.channel)
         if reply and reply.content.lower()[0] == "y":
             await self.bot.send_message(user, self._generate_key_msg(author, name, key))
-            _update_key_info(name, user.display_name, user.id, author.id, key)
+            _update_key_info(keyfile_name=name, recipient=user.display_name, 
+                            recipient_id=user.id, sender_id=author.id, key=key)
 
 def _name_to_path(name):
     """converts a keyfile name to a path to it
