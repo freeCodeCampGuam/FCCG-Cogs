@@ -72,10 +72,10 @@ DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 #     },
 #     "TRANSACTIONS": {
 #         "uid": {
-#               "serverID": "id",
-#               "authorID": "id",
-#               "name":     "path",
-#                "key":      "key"
+#               "SERVERID": "id",
+#               "SENDERID": "id",
+#               "FILE":"path",
+#                "KEY":      "key"
 #
 #                }
 #      }
@@ -308,17 +308,21 @@ class KeyDistrib:
                                          "{} key. Accept it?(yes/no)"
                                          .format(author.display_name, server.name, name))
             
-
     async def on_message(self, message):
         """ await user's response to key offer. """
         author = message.author
         transactions = self.settings["TRANSACTIONS"]
-        name = transactions[author.id]
         if any(author.id in transaction for transaction in transactions):
+            data = transactions[author.id]
             if message.channel.is_private and message.content.lower().startswith("y"):
-                await self.bot.send_message(author, self._generate_key_msg(author, name, key))
-                _update_key_info(keyfile_name=name, recipient=user.display_name, 
-                            recipient_id=user.id, sender_id=author.id, key=key)
+                file = data["FILE"]
+                key = data["KEY"]
+                server_id = data["SERVERID"]
+                sender_id = data["SENDERID"]
+
+                await self.bot.send_message(author, self._generate_key_msg(author, file, key))
+                _update_key_info(keyfile_name=file, recipient=author.display_name, 
+                            recipient_id=author.id, sender_id=sender_id, key=key)
 
 
 def _name_to_path(name):
