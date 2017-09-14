@@ -142,7 +142,7 @@ class KeyDistrib:
             #TODO: tell user it's done
 
     def _update_keys(self, keyfile_name):
-        """ this function deletes unused keys in settings. 
+        """ deletes unused keys in settings. 
         Otherwise, if it is a newly added key to the
         keys file, it initializes it to None. """
         keys_in_settings = self.settings["FILES"][keyfile_name]["KEYS"]
@@ -156,6 +156,15 @@ class KeyDistrib:
                     del keys_in_settings[key]
             else:  # add it
                 keys_in_settings[key] = None
+
+    def _update_key_info(self, name, recipient, r_id, s_id, key):
+        key_info = self.settings["FILES"][name]["KEYS"]["key"]
+        key_info["STATUS"] = "USED"
+        key_info["DATE"] = os.path.getmtime(self.settings)
+        key_info["RECIPIENT"]["NAME"] = recipient
+        key_info["RECIPIENT"]["UID"] = r_id
+        key_info["SENDER"] = s_id
+
 
     def _get_key(self, name, server):
         """ retrieves an available key within the settings file. 
@@ -234,7 +243,7 @@ class KeyDistrib:
         try:
             keyring["SERVERS"].remove(server.id)
             msg = "Keys from that file can no longer be distributed in this server"
-        except ValueError:
+        except ValueError:p
             keyring["SERVERS"].append(server.id)
             msg = "Keys from that file can now be distributed in this server"
 
@@ -289,10 +298,10 @@ class KeyDistrib:
         message = await self.bot.whisper("{} in the {} server is giving you a "
                                          "{} key. Accept it?(yes/no)"
                                          .format(author.display_name, server.name, name))
-        reply = await self.bot.wait_for_message(15, author=user, channel=message.channel)
+        reply = await self.bot.wait_for_message(120, author=user, channel=message.channel)
         if reply and reply.content.lower()[0] == "y":
             await self.bot.send_message(user, self._generate_key_msg(author, name, key))
-            #_update_key_info()
+            _update_key_info(name, user.display_name, user.id, author.id, key)
 
 def _name_to_path(name):
     """converts a keyfile name to a path to it
