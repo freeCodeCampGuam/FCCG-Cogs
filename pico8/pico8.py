@@ -10,11 +10,37 @@ import re
 import json
 from random import randint
 from random import choice as randchoice
+from collections.abc import MutableSequence
 from __main__ import send_cmd_help
 from cogs import repl
 
 
 SETTINGS_PATH = "data/pico8/settings.json"
+
+
+class ReactiveList(MutableSequence):
+    """calls a callback with the list item when it is accessed
+    """
+
+    def __init__(self, *args, callback, **kwargs):
+        self.callback = callback
+        self._list = list(args[0]) if len(args) else []
+
+    def __getitem__(self, key):
+        self.callback(key)
+        return self._list[key]
+
+    def __setitem__(self, key, value):
+        self._list[key] = value
+
+    def __delitem__(self, key):
+        del self._list[key]
+
+    def __len__(self):
+        return len(self._list)
+
+    def insert(self, key, value):
+        return self._list.insert(key, value)
 
 
 class BBS:
@@ -61,6 +87,12 @@ class BBS:
         self.posts = []
         self.current_post = 0
         self.queue = []
+        self.embeds = ReactiveList(callback=self.queue_area)
+
+    def queue_area(self, i):
+        self.posts[i]
+        self.queue.extend([i, (i + 1) % len(self.posts), 
+                              (i - 1) % len(self.posts)])
 
     async def __aenter__(self):
         self.runner = self.loop.create_task(self._queue_runner())
@@ -72,11 +104,13 @@ class BBS:
 
     def set_search(self, term):
         self.params.update({'search': term})
+
     async def search(self, term, orderby="RECENT"):
         self.set_search(term)
         self.set_param("orderby", orderby)
         await self._populate_results()
         return self.posts
+
     async def _populate_results(self):
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
@@ -139,7 +173,7 @@ class BBS:
             self.embeds.append(embed)
 
         await self._populate_post(0)
-        self.queue = [0,-1,1]
+        self.queue_area(0)
 
     async def _populate_post(self, index_or_id, post=None):
         # hope this doesn't fail
