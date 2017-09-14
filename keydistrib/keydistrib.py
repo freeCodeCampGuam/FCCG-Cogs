@@ -158,6 +158,8 @@ class KeyDistrib:
                 keys_in_settings[key] = None
 
     def _update_key_info(self, name, recipient, r_id, s_id, key):
+        """ updates information about the specified key after a
+        give_key() instance. """
         key_info = self.settings["FILES"][name]["KEYS"]["key"]
         key_info["STATUS"] = "USED"
         key_info["DATE"] = os.path.getmtime(self.settings)
@@ -298,7 +300,7 @@ class KeyDistrib:
         message = await self.bot.whisper("{} in the {} server is giving you a "
                                          "{} key. Accept it?(yes/no)"
                                          .format(author.display_name, server.name, name))
-        reply = await self.bot.wait_for_message(120, author=user, channel=message.channel)
+        reply = await self.bot.on_message(120, author=user, channel=message.channel)
         if reply and reply.content.lower()[0] == "y":
             await self.bot.send_message(user, self._generate_key_msg(author, name, key))
             _update_key_info(name, user.display_name, user.id, author.id, key)
