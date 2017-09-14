@@ -42,9 +42,10 @@ DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 #TODO: display user-key info. who has gotten what, etc
 #TODO: also get key-list in DM from mod/admin?
 #TODO: msg tied to each file/key (line override)
-
+#
 #TODO: option to limit # of keys
-
+#TODO: update transactions in _update_keys
+#
 #---- settings format -----
 # Diagram: settings->(FILES->filepath->(SERVERS,KEYS->key), USERS->uid)
 # 
@@ -70,8 +71,14 @@ DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 #         "uid": ["filepath\nkey"]  # key indexes
 #     },
 #     "TRANSACTIONS": {
-#         "uid": "filepath\nkey"
-#     }
+#         "uid": {
+#               "serverID": "id",
+#               "authorID": "id",
+#               "name":     "path",
+#                "key":      "key"
+#
+#                }
+#      }
 # }
 #
 
@@ -300,11 +307,19 @@ class KeyDistrib:
         message = await self.bot.whisper("{} in the {} server is giving you a "
                                          "{} key. Accept it?(yes/no)"
                                          .format(author.display_name, server.name, name))
-        reply = await self.bot.on_message(120, author=user, channel=message.channel)
-        if reply and reply.content.lower()[0] == "y":
-            await self.bot.send_message(user, self._generate_key_msg(author, name, key))
-            _update_key_info(keyfile_name=name, recipient=user.display_name, 
+            
+
+    async def on_message(self, message):
+        """ await user's response to key offer. """
+        author = message.author
+        transactions = self.settings["TRANSACTIONS"]
+        name = transactions[author.id]
+        if any(author.id in transaction for transaction in transactions):
+            if message.channel.is_private and message.content.lower().startswith("y"):
+                await self.bot.send_message(author, self._generate_key_msg(author, name, key))
+                _update_key_info(keyfile_name=name, recipient=user.display_name, 
                             recipient_id=user.id, sender_id=author.id, key=key)
+
 
 def _name_to_path(name):
     """converts a keyfile name to a path to it
