@@ -11,6 +11,8 @@ import json
 from random import randint
 from random import choice as randchoice
 from __main__ import send_cmd_help
+from cogs import repl
+
 
 SETTINGS_PATH = "data/pico8/settings.json"
 
@@ -121,12 +123,29 @@ class BBS:
                        "STATUS": "",
                        "URL": "{}?tid={}".format(self.url, p[1]),
                        "PARAM": {"tid": p[1]}} for p in posts]
+
+        for p in self.posts:
+            embed=discord.Embed(title=p["TITLE"], url=p["URL"], 
+                                description="Loading...")
+            embed.set_author(name=p["AUTHOR"], url=p["AUTHOR_URL"], 
+                             icon_url=p["AUTHOR_PIC"])
+            if p['PNG']:
+                embed.set_thumbnail(url=p['PNG'])
+            embed.add_field(name="Loading...", value="by Loading...", inline=True)
+            embed.set_footer(text="{} ⭐{} | {}".format(p["DATE"], p["STARS"],
+                                                        ','.join(p['TAGS'])))
+            if p['THUMB']:
+                embed.set_image(url=p["THUMB"])
+            self.embeds.append(embed)
+
         await self._populate_post(0)
         self.queue = [0,-1,1]
 
     async def _populate_post(self, index_or_id, post=None):
         # hope this doesn't fail
-        post = post or self.posts[self._get_post_index(index_or_id)]
+        index = self._get_post_index(index_or_id)
+        post = post or self.posts[index]
+        embed = self.embeds._list[index]
         post['STATUS'] = 'processing'
         try:
             index = self._get_post_index(index_or_id)
@@ -134,6 +153,7 @@ class BBS:
             soup = BeautifulSoup(raw, "html.parser")
             # continue
             post['SOUP'] = soup
+            embed.description = 'Done'
         except Exception as e:
             post['STATUS'] = 'failed'
             raise e
@@ -285,21 +305,8 @@ class Pico8:
         author = ctx.message.author
         async with BBS(self.bot.loop, search_terms) as bbs:
             self.searches.append(bbs)
-            p = bbs.posts[0]
-            embed=discord.Embed(title=p["TITLE"], url=p["URL"], 
-                                description="Loading...")
-            embed.set_author(   name=p["AUTHOR"], url=p["AUTHOR_URL"], 
-                                icon_url=p["AUTHOR_PIC"])
-            if p['PNG']:
-                embed.set_thumbnail(url=p['PNG'])
-            embed.add_field(    name="Loading...", value="by Loading...", inline=True)
-            embed.set_footer(   text="{} ⭐{} | {}".format(p["DATE"], p["STARS"],
-                                                           ','.join(p['TAGS'])))
-            if p['THUMB']:
-                embed.set_image(    url=p["THUMB"])
-            await self.bot.say(embed=embed)
-
-            answer = await self.bot.wait_for_message(timeout=60,
+            await repl.interactive_results(self.bot, ctx, bbs.embeds)
+            answer = await self.bot.wait_for_message(timeout=15,
                                                      author=author, content="done")
 
 
