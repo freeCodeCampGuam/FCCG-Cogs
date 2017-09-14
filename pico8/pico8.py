@@ -7,6 +7,7 @@ import asyncio
 import os
 import aiohttp
 import re
+import json
 from random import randint
 from random import choice as randchoice
 from __main__ import send_cmd_help
@@ -45,6 +46,7 @@ class BBS:
             "FAVOURITES":    "favourites"
         }
     }
+    RE_POSTS = re.compile(r"var pdat=(.*?);\r\n\t\tvar updat", re.DOTALL)
 
     def __init__(self, loop, search, orderby="RECENT", params={}):
         self.url = BBS.BASE
@@ -68,21 +70,57 @@ class BBS:
 
     def set_search(self, term):
         self.params.update({'search': term})
-
     async def search(self, term, orderby="RECENT"):
         self.set_search(term)
         self.set_param("orderby", orderby)
         await self._populate_results()
-
         return self.posts
-
     async def _populate_results(self):
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
-        posts = soup.find_all(id=re.compile("pdat_.*"))
-        self.posts = [{"TITLE": t.a.text,
+        js_posts = re.search(BBS.RE_POSTS, raw).group(1)
+        cleanse = {'\r': '', '\n': '', '\t': '', '`': '"', 
+                   ',]': ']', ',,': ',null,'}
+        for p, r in cleanse.items():
+            js_posts = js_posts.replace(p, r)
+        posts = json.loads(js_posts)
+        # [38386, 28997, `Poop Blaster`,"thumbs/pico38385.png",
+        #  0:pid 1:tid 2:title 3:thumb
+        # 64,64,"2017-03-18",15018,"chase","2017-03-19",9551,
+        # 4:w 5:h 6:date 7:aid 8:author 9:date2 10:uid
+        # "kittenm4ster",0,2,0,
+        # 11:last 12:likes 13:comments 14:?
+        # 7,3,38385,[],0]
+        # 15:cat 16:subcat 17:cid 18:tags 19:resolved
+
+        self.posts = [{"OSOUP": soup,
+                       "PID": p[0],
+                       "TID": p[1],
+                       "TITLE": p[2],
+                       "DESC": None,  # temp
+                       "THUMB": self.url + ('..' + p[3] if p[3][0] == '/' else p[3]),
+                       "DATE": p[6],
+                       "AID": p[7],
+                       "AUTHOR": p[8],
+                       "AUTHOR_URL": self.url + "?uid={}".format(p[7]),
+                       "AUTHOR_PIC": "https://www.lexaloffle.com/bimg/pi/pi28.png",  # temp
+                       "STARS": p[12],
+                       "CC": False,  # temp
+                       "COMMENTS": p[13],
+                       # "FAV": p[14]  # used in generate_cart_preview.
+                       # apparently is also the cart id sometimes?
+                       "CAT": p[15],
+                       "SUB": p[16],
+                       "CID": p[17],
+                       "PNG": None if ((p[15] not in (6,7)) or p[17] is None) else
+                              self.url + ('cposts/{}/{}.p8.png' if p[15] == 7 else 
+                                          'cposts/{}/cpost{}.png').format(p[17] // 10000, p[17]),
+                       "CART_TITLE": None,  # temp
+                       "CART_AUTHOR": None,  # temp
+                       "TAGS": p[18],
                        "STATUS": "",
-                       "PARAM": {"tid": t.a['href'][5:]}} for t in posts]
+                       "URL": "{}?tid={}".format(self.url, p[1]),
+                       "PARAM": {"tid": p[1]}} for p in posts]
         await self._populate_post(0)
         self.queue = [0,-1,1]
 
@@ -247,8 +285,23 @@ class Pico8:
         author = ctx.message.author
         async with BBS(self.bot.loop, search_terms) as bbs:
             self.searches.append(bbs)
-            answer = await self.bot.wait_for_message(timeout=30,
+            p = bbs.posts[0]
+            embed=discord.Embed(title=p["TITLE"], url=p["URL"], 
+                                description="Loading...")
+            embed.set_author(   name=p["AUTHOR"], url=p["AUTHOR_URL"], 
+                                icon_url=p["AUTHOR_PIC"])
+            if p['PNG']:
+                embed.set_thumbnail(url=p['PNG'])
+            embed.add_field(    name="Loading...", value="by Loading...", inline=True)
+            embed.set_footer(   text="{} ⭐{} | {}".format(p["DATE"], p["STARS"],
+                                                           ','.join(p['TAGS'])))
+            if p['THUMB']:
+                embed.set_image(    url=p["THUMB"])
+            await self.bot.say(embed=embed)
+
+            answer = await self.bot.wait_for_message(timeout=60,
                                                      author=author, content="done")
+
 
 def check_folders():
     paths = ("data/pico8", )
