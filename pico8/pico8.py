@@ -8,6 +8,7 @@ import os
 import aiohttp
 import re
 import json
+from asyncio import Lock
 from random import randint
 from random import choice as randchoice
 from collections.abc import MutableSequence
@@ -87,7 +88,9 @@ class BBS:
         self.posts = []
         self.current_post = 0
         self.queue = []
-        self.embeds = ReactiveList(callback=self.queue_area)
+        self.embeds = []
+        self.load_tasks = ReactiveList(callback=self.queue_area)
+        self.locks = []
 
     def queue_area(self, i):
         self.posts[i]
@@ -171,6 +174,13 @@ class BBS:
             if p['THUMB']:
                 embed.set_image(url=p["THUMB"])
             self.embeds.append(embed)
+            self.locks.append(Lock())
+
+        async def gen_embed(i):
+            await self._populate_post(i)
+            return self.embeds[i]
+
+        self.load_tasks.extend(gen_embed(i) for i in range(len(self.embeds)))
 
         await self._populate_post(0)
         self.queue_area(0)
@@ -179,19 +189,25 @@ class BBS:
         # hope this doesn't fail
         index = self._get_post_index(index_or_id)
         post = post or self.posts[index]
-        embed = self.embeds._list[index]
-        post['STATUS'] = 'processing'
-        try:
-            index = self._get_post_index(index_or_id)
-            raw = await self._get_post(index)
-            soup = BeautifulSoup(raw, "html.parser")
-            # continue
-            post['SOUP'] = soup
-            embed.description = 'Done'
-        except Exception as e:
-            post['STATUS'] = 'failed'
-            raise e
-        post['STATUS'] = 'success'
+        embed = self.embeds[index]
+        # needlessly complicated
+        if post['STATUS'] == 'success':
+            return True
+        async with self.locks[index]:
+            if post['STATUS'] == 'success':
+                return True
+            post['STATUS'] = 'processing'
+            try:
+                index = self._get_post_index(index_or_id)
+                raw = await self._get_post(index)
+                soup = BeautifulSoup(raw, "html.parser")
+                # continue
+                post['SOUP'] = soup
+                embed.description = 'Done'
+            except Exception as e:
+                post['STATUS'] = 'failed'
+                raise e
+            post['STATUS'] = 'success'
 
 
     def _get_post_index(self, index_or_id):
@@ -339,7 +355,7 @@ class Pico8:
         author = ctx.message.author
         async with BBS(self.bot.loop, search_terms) as bbs:
             self.searches.append(bbs)
-            await repl.interactive_results(self.bot, ctx, bbs.embeds)
+            await repl.interactive_results(self.bot, ctx, bbs.load_tasks)
             answer = await self.bot.wait_for_message(timeout=15,
                                                      author=author, content="done")
 
