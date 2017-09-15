@@ -311,7 +311,7 @@ class KeyDistrib:
         transaction["KEY"] = self._get_key(name, server)
         self._save()
 
-        if check_repeat(user):
+        if check_repeat(user, name):
             return await self.bot.say("{} received a key already!".format(user.name))
         else
             #TODO: send user confirmation prompt
@@ -319,7 +319,7 @@ class KeyDistrib:
                                             "{} key. Accept it?(yes/no)"
                                             .format(author.display_name, server.name, name))
             
-    async def check_repeat(self, user):
+    async def check_repeat(self, user, file):
         """ checks if user received a key already in the past from the keyfile """
         keydata = self.settings["FILES"][file]["KEYS"]
         for key in keydata
