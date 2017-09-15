@@ -385,10 +385,11 @@ def check_files():
                         "Adding " + str(key) + " field to keydistrib settings.json")
             dataIO.save_json(SETTINGS_PATH, current)
 
+#test
 
 def setup(bot: red.Bot):
     check_folders()
-    check_files()
+    check_files() 
     n = KeyDistrib(bot)
     bot.add_cog(n)
 
