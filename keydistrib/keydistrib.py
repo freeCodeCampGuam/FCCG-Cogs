@@ -73,6 +73,7 @@ DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 #     "TRANSACTIONS": {
 #         "uid": {
 #               "SERVERID": "id",
+#               "SENDER":   "sender"
 #               "SENDERID": "id",
 #               "FILE":   "name",
 #                "KEY":    "key"
@@ -105,13 +106,12 @@ class KeyDistrib:
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
-    def _update_file(self, keyfile_name=None):
+    def _update_file(self, server, keyfile_name=None):
         """Update memory to match keyfile, given its keyfile_name.
 
         if none given, updates for every keyfile in memory
         """
         settings = self.settings
-        server = ctx.message.server
         if keyfile_name is None:
             keyfiles = settings['FILES']
         else:
@@ -167,19 +167,20 @@ class KeyDistrib:
     def _update_key_info(self, *, keyfile_name, recipient, recipient_id, sender_id, key):
         """ updates information about the specified key after a
         give_key() instance. """
+        self.settings["FILES"][name]["KEYS"]["key"] = {}
         key_info = self.settings["FILES"][name]["KEYS"]["key"]
         key_info["STATUS"] = "USED"
         key_info["DATE"] = os.path.getmtime(self.settings)
         key_info["RECIPIENT"]["NAME"] = recipient
-        key_info["RECIPIENT"]["UID"] = r_id
-        key_info["SENDER"] = s_id
+        key_info["RECIPIENT"]["UID"] = recipient_id
+        key_info["SENDER"] = sender_id
         self._save()
 
 
     def _get_key(self, name, server):
         """ retrieves an available key within the settings file. 
         Raises KeyError if not allowed or no keys available."""
-        self._update_file(name)
+        self._update_file(server, name)
         if not self._can_get_key(name, server):
             raise KeyError("The {} keyfile isn't turned on in this server."
                            .format(name))
@@ -187,7 +188,7 @@ class KeyDistrib:
         for key, meta in keys.items():
             if meta is None:
                 return key
-        raise KeyError("No available keys. Please notify your server admin and try again.")
+        raise KeyError("No available keys. Please add more keys to {} file").format(name)
 
     def _can_get_key(self, name, server):
         """whether or not a keyfile is accessible to this server"""
@@ -230,6 +231,16 @@ class KeyDistrib:
         return (self.settings['FILES'][file]['MESSAGE']
                 .format(presenter=presenter, file=file, key=key))
 
+    def check_repeat(self, user, file):
+        """ checks if user received a key already in the past from the keyfile """
+        keydata = self.settings["FILES"][file]["KEYS"]
+        for key in keydata:
+            if keydata[key] is None:
+                continue
+            elif keydata[key]["RECIPIENT"]["UID"] == user.id:
+                return True
+        return False
+
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
     async def distribset(self, ctx):
@@ -253,9 +264,9 @@ class KeyDistrib:
         try:
             keyring["SERVERS"].remove(server.id)
             msg = "Keys from that file can no longer be distributed in this server"
-        except ValueError:p
-            keyring["SERVERS"].append(server.id)
-            msg = "Keys from that file can now be distributed in this server"
+        except ValueError: p
+        keyring["SERVERS"].append(server.id)
+        msg = "Keys from that file can now be distributed in this server"
 
         self._save()
         await self.bot.reply(msg)
@@ -303,29 +314,24 @@ class KeyDistrib:
         if author is user:
             return await self.bot.say("What are you doing :neutral_face:")
 
+        self.settings["TRANSACTIONS"][user.id] = {}
         transaction = self.settings["TRANSACTIONS"][user.id]
 
         transaction["SERVERID"] = server.id
+        transaction["SENDER"] = author.name
         transaction["SENDERID"] = author.id
         transaction["FILE"] = name
         transaction["KEY"] = self._get_key(name, server)
+
         self._save()
 
-        if check_repeat(user, name):
+        if self.check_repeat(user, name):
             return await self.bot.say("{} received a key already!".format(user.name))
-        else
+        else:
             #TODO: send user confirmation prompt
-            message = await self.bot.whisper("{} in the {} server is giving you a "
+            message = await self.bot.send_message(user, "{} in the {} server is giving you a "
                                             "{} key. Accept it?(yes/no)"
                                             .format(author.display_name, server.name, name))
-            
-    async def check_repeat(self, user, file):
-        """ checks if user received a key already in the past from the keyfile """
-        keydata = self.settings["FILES"][file]["KEYS"]
-        for key in keydata
-            if keydata[key]["RECIPIENT"]["UID"] == user.id:
-                return True
-        return False
 
     async def on_message(self, message):
         """ await user's response to key offer. If 'yes', send key """
@@ -385,7 +391,6 @@ def check_files():
                         "Adding " + str(key) + " field to keydistrib settings.json")
             dataIO.save_json(SETTINGS_PATH, current)
 
-#test
 
 def setup(bot: red.Bot):
     check_folders()
