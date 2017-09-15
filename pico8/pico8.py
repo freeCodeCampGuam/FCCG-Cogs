@@ -162,9 +162,9 @@ class BBS:
                        "PARAM": {"tid": p[1]}} for p in posts]
 
         for p in self.posts:
-            embed=discord.Embed(title=p["TITLE"], url=p["URL"], 
+            embed=discord.Embed(title=p["TITLE"], url=p["URL"],
                                 description="Loading...")
-            embed.set_author(name=p["AUTHOR"], url=p["AUTHOR_URL"], 
+            embed.set_author(name=p["AUTHOR"], url=p["AUTHOR_URL"],
                              icon_url=p["AUTHOR_PIC"])
             if p['PNG']:
                 embed.set_thumbnail(url=p['PNG'])
