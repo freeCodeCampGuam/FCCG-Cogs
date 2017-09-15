@@ -74,8 +74,8 @@ DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 #         "uid": {
 #               "SERVERID": "id",
 #               "SENDERID": "id",
-#               "FILE":"path",
-#                "KEY":      "key"
+#               "FILE":   "name",
+#                "KEY":    "key"
 #
 #                }
 #      }
@@ -173,6 +173,7 @@ class KeyDistrib:
         key_info["RECIPIENT"]["NAME"] = recipient
         key_info["RECIPIENT"]["UID"] = r_id
         key_info["SENDER"] = s_id
+        self._save()
 
 
     def _get_key(self, name, server):
@@ -294,7 +295,7 @@ class KeyDistrib:
     @checks.mod_or_permissions()
     @commands.command(pass_context=True, no_pm=True)
     async def give_key(self, ctx, name: KeyFileName, user: discord.Member):
-        """Give a member a key"""
+        """ opens a transaction to give a key to a member """
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
@@ -302,14 +303,32 @@ class KeyDistrib:
         if author is user:
             return await self.bot.say("What are you doing :neutral_face:")
 
-        key = self._get_key(name, server)
-        #TODO: send user confirmation prompt
-        message = await self.bot.whisper("{} in the {} server is giving you a "
-                                         "{} key. Accept it?(yes/no)"
-                                         .format(author.display_name, server.name, name))
+        transaction = self.settings["TRANSACTIONS"][user.id]
+
+        transaction["SERVERID"] = server.id
+        transaction["SENDERID"] = author.id
+        transaction["FILE"] = name
+        transaction["KEY"] = self._get_key(name, server)
+        self._save()
+
+        if check_repeat(user):
+            return await self.bot.say("{} received a key already!".format(user.name))
+        else
+            #TODO: send user confirmation prompt
+            message = await self.bot.whisper("{} in the {} server is giving you a "
+                                            "{} key. Accept it?(yes/no)"
+                                            .format(author.display_name, server.name, name))
             
+    async def check_repeat(self, user):
+        """ checks if user received a key already in the past from the keyfile """
+        keydata = self.settings["FILES"][file]["KEYS"]
+        for key in keydata
+            if keydata[key]["RECIPIENT"]["UID"] == user.id:
+                return True
+        return False
+
     async def on_message(self, message):
-        """ await user's response to key offer. """
+        """ await user's response to key offer. If 'yes', send key """
         author = message.author
         transactions = self.settings["TRANSACTIONS"]
         if any(author.id in transaction for transaction in transactions):
