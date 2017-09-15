@@ -12,7 +12,7 @@ from __main__ import send_cmd_help
 
 SETTINGS_PATH = "data/keydistrib/settings.json"
 KEYS_PATH = "data/keydistrib/keys"
-DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
+DEFAULT_MSG = "{presenter} gave you a {file} key: {key}"
 
 
 #TODO: 1st phase
@@ -73,8 +73,8 @@ DEFAULT_MSG = "{presenter.display_name} gave you a {file} key: {key}"
 #     "TRANSACTIONS": {
 #         "uid": {
 #               "SERVERID": "id",
-#               "SENDER":   "sender"
 #               "SENDERID": "id",
+#                "SENDER":   "name"
 #               "FILE":   "name",
 #                "KEY":    "key"
 #
@@ -164,13 +164,13 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def _update_key_info(self, *, keyfile_name, recipient, recipient_id, sender_id, key):
+    def _update_key_info(self, keyfile_name, recipient, recipient_id, sender_id, key):
         """ updates information about the specified key after a
         give_key() instance. """
-        self.settings["FILES"][name]["KEYS"]["key"] = {}
-        key_info = self.settings["FILES"][name]["KEYS"]["key"]
+        self.settings["FILES"][keyfile_name]["KEYS"][key] = {}
+        key_info = self.settings["FILES"][keyfile_name]["KEYS"][key]
         key_info["STATUS"] = "USED"
-        key_info["DATE"] = os.path.getmtime(self.settings)
+        key_info["RECIPIENT"] = {}
         key_info["RECIPIENT"]["NAME"] = recipient
         key_info["RECIPIENT"]["UID"] = recipient_id
         key_info["SENDER"] = sender_id
@@ -311,15 +311,15 @@ class KeyDistrib:
         channel = ctx.message.channel
         author = ctx.message.author
 
-        if author is user:
-            return await self.bot.say("What are you doing :neutral_face:")
+        #if author is user:
+         #   return await self.bot.say("What are you doing :neutral_face:")
 
         self.settings["TRANSACTIONS"][user.id] = {}
         transaction = self.settings["TRANSACTIONS"][user.id]
 
         transaction["SERVERID"] = server.id
-        transaction["SENDER"] = author.name
         transaction["SENDERID"] = author.id
+        transaction["SENDER"] = author.display_name
         transaction["FILE"] = name
         transaction["KEY"] = self._get_key(name, server)
 
@@ -344,10 +344,12 @@ class KeyDistrib:
                 key = data["KEY"]
                 server_id = data["SERVERID"]
                 sender_id = data["SENDERID"]
+                sender = data["SENDER"]
 
-                await self.bot.send_message(author, self._generate_key_msg(author, file, key))
-                _update_key_info(keyfile_name=file, recipient=author.display_name, 
-                            recipient_id=author.id, sender_id=sender_id, key=key)
+                await self.bot.send_message(author, self._generate_key_msg(sender, file, key))
+                self._update_key_info(file, author.display_name, author.id, sender_id, key)
+            elif message.content.lower().startswith("n"):
+                await self.bot.send_message(author, "Transaction closed.")
 
 
 def _name_to_path(name):
