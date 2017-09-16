@@ -332,12 +332,15 @@ class KeyDistrib:
         self._save()
 
         if self.check_repeat(user, name):
-            return await self.bot.say("{} received a key already!".format(user.name))
+            return await self.bot.say("{} received a key already!".format(user.display_name))
         else:
             #TODO: send user confirmation prompt
             message = await self.bot.send_message(user, "{} in the {} server is giving you a "
                                             "{} key. Accept it?(yes/no)"
                                             .format(author.display_name, server.name, name))
+            await self.bot.say("Confirmation prompt sent to {}".format(user.display_name))
+
+
 
     async def on_message(self, message):
         """ await user's response to key offer. If 'yes', send key """
