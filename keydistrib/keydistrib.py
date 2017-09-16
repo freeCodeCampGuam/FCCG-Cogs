@@ -356,21 +356,23 @@ class KeyDistrib:
     async def on_message(self, message):
         """ await user's response to key offer. If 'yes', send key """
         author = message.author
+        author_id = author.id
         transactions = self.settings["TRANSACTIONS"]
         if author.id in transactions:
             data = transactions[author.id]
-            if message.channel.is_private and message.content.lower().startswith("y"):
-                file = data["FILE"]
-                key = data["KEY"]
-                server_id = data["SERVERID"]
-                sender_id = data["SENDERID"]
-                sender = data["SENDER"]
+            file = data["FILE"]
+            key = data["KEY"]
+            server_id = data["SERVERID"]
+            sender_id = data["SENDERID"]
+            sender = data["SENDER"]
 
-                await self.bot.send_message(author, self._generate_key_msg(sender, file, key))
-                self._update_key_info(file, author.display_name, author.id, sender_id, key)
+            if message.channel.is_private and message.content.lower().startswith("y"):
+                self._update_key_info(True, file, author.display_name, author.id, sender_id, key)
+                self._del_transact(author_id)
             elif message.content.lower().startswith("n"):
                 await self.bot.send_message(author, "You chose not to accept the key.")
-        #self._del_transact(author.id)
+                self.settings["FILES"][file]["KEYS"][key] = None
+                self._del_transact(author_id)
 
 
 def _name_to_path(name):
