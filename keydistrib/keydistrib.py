@@ -369,10 +369,17 @@ class KeyDistrib:
             if message.channel.is_private and message.content.lower().startswith("y"):
                 self._update_key_info(True, file, author.display_name, author.id, sender_id, key)
                 self._del_transact(author_id)
+                await self.bot.send_message(author, self._generate_key_msg(sender, file, key))             
+            
             elif message.content.lower().startswith("n"):
                 await self.bot.send_message(author, "You chose not to accept the key.")
                 self.settings["FILES"][file]["KEYS"][key] = None
                 self._del_transact(author_id)
+                server = self.bot.get_server(server_id)
+                member = server.get_member(sender_id)
+                await self.bot.send_message(member, "{} ({}) in the {} server has declined the {}"
+                                                    "key you offered him.".format(author.display_name,
+                                                        author_id,server.name,file))
 
 
 def _name_to_path(name):
