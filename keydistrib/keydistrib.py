@@ -317,8 +317,8 @@ class KeyDistrib:
         channel = ctx.message.channel
         author = ctx.message.author
 
-        #if author is user:
-         #   return await self.bot.say("What are you doing :neutral_face:")
+        if author is user:
+            return await self.bot.say("What are you doing :neutral_face:")
 
         self.settings["TRANSACTIONS"][user.id] = {}
         transaction = self.settings["TRANSACTIONS"][user.id]
