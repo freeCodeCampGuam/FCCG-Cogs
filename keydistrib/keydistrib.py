@@ -357,7 +357,7 @@ class KeyDistrib:
         """ await user's response to key offer. If 'yes', send key """
         author = message.author
         transactions = self.settings["TRANSACTIONS"]
-        if any(author.id in transaction for transaction in transactions):
+        if author.id in transactions:
             data = transactions[author.id]
             if message.channel.is_private and message.content.lower().startswith("y"):
                 file = data["FILE"]
