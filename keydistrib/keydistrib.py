@@ -323,25 +323,33 @@ class KeyDistrib:
         if author is user:
             return await self.bot.say("What are you doing :neutral_face:")
 
-        self.settings["TRANSACTIONS"][user.id] = {}
-        transaction = self.settings["TRANSACTIONS"][user.id]
+        if self.check_repeat(user, name):
+            return await self.bot.say("{} received a key already!".format(user.display_name))
+        
+        try:
+            key = self._get_key(name, server)
+        except IndexError as e:
+            return await self.bot.say(str(e))
+        self._update_key_info(False, name, user.display_name, user.id, author.id, key)
 
+
+        transaction = self.settings["TRANSACTIONS"].setdefault(user.id, {})
+        
         transaction["SERVERID"] = server.id
         transaction["SENDERID"] = author.id
         transaction["SENDER"] = author.display_name
         transaction["FILE"] = name
-        transaction["KEY"] = self._get_key(name, server)
+        transaction["KEY"] = key
 
         self._save()
 
-        if self.check_repeat(user, name):
-            return await self.bot.say("{} received a key already!".format(user.display_name))
-        else:
-            #TODO: send user confirmation prompt
-            message = await self.bot.send_message(user, "{} in the {} server is giving you a "
-                                            "{} key. Accept it?(yes/no)"
-                                            .format(author.display_name, server.name, name))
-            await self.bot.say("Confirmation prompt sent to {}".format(user.display_name))
+        
+        
+        #TODO: send user confirmation prompt
+        message = await self.bot.send_message(user, "{} in the {} server is giving you a "
+                                        "{} key. Accept it?(yes/no)"
+                                        .format(author.display_name, server.name, name))
+        await self.bot.say("Confirmation prompt sent to {}".format(user.display_name))
 
 
 
