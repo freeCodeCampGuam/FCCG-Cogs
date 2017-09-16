@@ -356,7 +356,7 @@ class KeyDistrib:
                 self._update_key_info(file, author.display_name, author.id, sender_id, key)
             elif message.content.lower().startswith("n"):
                 await self.bot.send_message(author, "You chose not to accept the key.")
-       # self._del_transact(author.id)
+        #self._del_transact(author.id)
 
 
 def _name_to_path(name):
