@@ -192,7 +192,7 @@ class KeyDistrib:
         for key, meta in keys.items():
             if meta is None:
                 return key
-        raise KeyError("No available keys. Please add more keys to {} file").format(name)
+        raise IndexError("No available keys. Please add more keys to {} file".format(name))
 
     def _can_get_key(self, name, server):
         """whether or not a keyfile is accessible to this server"""
