@@ -170,6 +170,7 @@ class KeyDistrib:
         self.settings["FILES"][keyfile_name]["KEYS"][key] = {}
         key_info = self.settings["FILES"][keyfile_name]["KEYS"][key]
         key_info["STATUS"] = "USED"
+        key_info["DATE"] = os.path.getmtime(self._name_to_path(keyfile_name))
         key_info["RECIPIENT"] = {}
         key_info["RECIPIENT"]["NAME"] = recipient
         key_info["RECIPIENT"]["UID"] = recipient_id
@@ -240,6 +241,10 @@ class KeyDistrib:
             elif keydata[key]["RECIPIENT"]["UID"] == user.id:
                 return True
         return False
+
+    def _del_transact(user_id):
+        del self.settings["TRANSACTIONS"][user_id]
+        self._save()
 
     @checks.admin_or_permissions()
     @commands.group(pass_context=True, no_pm=True)
@@ -349,7 +354,8 @@ class KeyDistrib:
                 await self.bot.send_message(author, self._generate_key_msg(sender, file, key))
                 self._update_key_info(file, author.display_name, author.id, sender_id, key)
             elif message.content.lower().startswith("n"):
-                await self.bot.send_message(author, "Transaction closed.")
+                await self.bot.send_message(author, "You chose not to accept the key.")
+            self._del_transact(author.id)
 
 
 def _name_to_path(name):
