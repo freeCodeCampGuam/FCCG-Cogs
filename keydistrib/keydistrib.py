@@ -164,12 +164,15 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def _update_key_info(self, keyfile_name, recipient, recipient_id, sender_id, key):
+    def _update_key_info(self, used, keyfile_name, recipient, recipient_id, sender_id, key):
         """ updates information about the specified key after a
         give_key() instance. """
         self.settings["FILES"][keyfile_name]["KEYS"][key] = {}
         key_info = self.settings["FILES"][keyfile_name]["KEYS"][key]
-        key_info["STATUS"] = "USED"
+        if used:
+            key_info["STATUS"] = "USED"
+        else:
+            key_info["STATUS"] = "IN-PROGRESS"
         key_info["DATE"] = os.path.getmtime(_name_to_path(keyfile_name))
         key_info["RECIPIENT"] = {}
         key_info["RECIPIENT"]["NAME"] = recipient
