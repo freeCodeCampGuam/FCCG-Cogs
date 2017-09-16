@@ -164,12 +164,15 @@ class KeyDistrib:
             else:  # add it
                 keys_in_settings[key] = None
 
-    def _update_key_info(self, keyfile_name, recipient, recipient_id, sender_id, key):
+    def _update_key_info(self, used, keyfile_name, recipient, recipient_id, sender_id, key):
         """ updates information about the specified key after a
         give_key() instance. """
         self.settings["FILES"][keyfile_name]["KEYS"][key] = {}
         key_info = self.settings["FILES"][keyfile_name]["KEYS"][key]
-        key_info["STATUS"] = "USED"
+        if used:
+            key_info["STATUS"] = "USED"
+        else:
+            key_info["STATUS"] = "IN-PROGRESS"
         key_info["DATE"] = os.path.getmtime(_name_to_path(keyfile_name))
         key_info["RECIPIENT"] = {}
         key_info["RECIPIENT"]["NAME"] = recipient
@@ -189,7 +192,7 @@ class KeyDistrib:
         for key, meta in keys.items():
             if meta is None:
                 return key
-        raise KeyError("No available keys. Please add more keys to {} file").format(name)
+        raise IndexError("No available keys. Please add more keys to {} file".format(name))
 
     def _can_get_key(self, name, server):
         """whether or not a keyfile is accessible to this server"""
@@ -320,46 +323,63 @@ class KeyDistrib:
         if author is user:
             return await self.bot.say("What are you doing :neutral_face:")
 
-        self.settings["TRANSACTIONS"][user.id] = {}
-        transaction = self.settings["TRANSACTIONS"][user.id]
+        if self.check_repeat(user, name):
+            return await self.bot.say("{} received a key already!".format(user.display_name))
+        
+        try:
+            key = self._get_key(name, server)
+        except IndexError as e:
+            return await self.bot.say(str(e))
+        self._update_key_info(False, name, user.display_name, user.id, author.id, key)
 
+
+        transaction = self.settings["TRANSACTIONS"].setdefault(user.id, {})
+        
         transaction["SERVERID"] = server.id
         transaction["SENDERID"] = author.id
         transaction["SENDER"] = author.display_name
         transaction["FILE"] = name
-        transaction["KEY"] = self._get_key(name, server)
+        transaction["KEY"] = key
 
         self._save()
 
-        if self.check_repeat(user, name):
-            return await self.bot.say("{} received a key already!".format(user.display_name))
-        else:
-            #TODO: send user confirmation prompt
-            message = await self.bot.send_message(user, "{} in the {} server is giving you a "
-                                            "{} key. Accept it?(yes/no)"
-                                            .format(author.display_name, server.name, name))
-            await self.bot.say("Confirmation prompt sent to {}".format(user.display_name))
+        
+        
+        #TODO: send user confirmation prompt
+        message = await self.bot.send_message(user, "{} in the {} server is giving you a "
+                                        "{} key. Accept it?(yes/no)"
+                                        .format(author.display_name, server.name, name))
+        await self.bot.say("Confirmation prompt sent to {}".format(user.display_name))
 
 
 
     async def on_message(self, message):
         """ await user's response to key offer. If 'yes', send key """
         author = message.author
+        author_id = author.id
         transactions = self.settings["TRANSACTIONS"]
-        if any(author.id in transaction for transaction in transactions):
+        if author.id in transactions:
             data = transactions[author.id]
-            if message.channel.is_private and message.content.lower().startswith("y"):
-                file = data["FILE"]
-                key = data["KEY"]
-                server_id = data["SERVERID"]
-                sender_id = data["SENDERID"]
-                sender = data["SENDER"]
+            file = data["FILE"]
+            key = data["KEY"]
+            server_id = data["SERVERID"]
+            sender_id = data["SENDERID"]
+            sender = data["SENDER"]
 
-                await self.bot.send_message(author, self._generate_key_msg(sender, file, key))
-                self._update_key_info(file, author.display_name, author.id, sender_id, key)
+            if message.channel.is_private and message.content.lower().startswith("y"):
+                self._update_key_info(True, file, author.display_name, author.id, sender_id, key)
+                self._del_transact(author_id)
+                await self.bot.send_message(author, self._generate_key_msg(sender, file, key))             
+            
             elif message.content.lower().startswith("n"):
                 await self.bot.send_message(author, "You chose not to accept the key.")
-        #self._del_transact(author.id)
+                self.settings["FILES"][file]["KEYS"][key] = None
+                self._del_transact(author_id)
+                server = self.bot.get_server(server_id)
+                member = server.get_member(sender_id)
+                await self.bot.send_message(member, "{} ({}) in the {} server has declined the {}"
+                                                    "key you offered him.".format(author.display_name,
+                                                        author_id,server.name,file))
 
 
 def _name_to_path(name):
