@@ -434,9 +434,50 @@ class Pico8:
         server = ctx.message.server
         msg = ctx.message
 
+        choices = {
+            "cat": {
+                "pico8": "PICO8", "p8": "PICO8",
+                "voxatron": "VOXATRON", "vox": "VOXATRON",
+            },
+            "sub": {
+                "jams": "JAMS",
+                "snippets": "SNIPPETS",
+                "discussions": "DISCUSSIONS", "discuss": "DISCUSSIONS",
+                "blogs": "BLOGS",
+                "inprogress": "WIP", "wip": "WIP",
+                "collaboration": "COLLABORATION", "collab": "COLLABORATION",
+                "art": "ART",
+                "support": "SUPPORT",
+                "workshops": "WORKSHOPS", "wkshop": "WORKSHOPS",
+                "shop": "WORKSHOPS",
+                "music": "MUSIC",
+                "cartridges": "CARTRIDGES", "carts": "CARTRIDGES"
+            },
+            "orderby": {
+                "new": "RECENT",
+                "stars": "FEATURED"
+            }
+        }
+
+        params = {}
+
+        if filters.startswith('?'):
+            filters = filters if ' ' in filters else filters + ' '
+            filters, search_terms = filters.split(' ', 1)
+            filters = filters[1:].lower().split(':')
+            for f in filters:
+                for k, ch in choices.items():
+                    if f in ch:
+                        if k in params:
+                            return await self.bot.say("You can only have one"
+                                                      "of each filter type.")
+                        params[k] = ch[f]
+        else:
+            search_terms = filters
+
         await self.bot.add_reaction(msg, '🔎')
 
-        async with BBS(self.bot.loop, search_terms) as bbs:
+        async with BBS(self.bot.loop, search_terms, params=params) as bbs:
             # self.searches.append(bbs)  # add caching later?
             await asyncio.gather(
                 repl.interactive_results(self.bot, ctx, bbs.load_tasks),
