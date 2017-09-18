@@ -172,8 +172,8 @@ class BBS:
             if p['PNG']:
                 embed.set_thumbnail(url=p['PNG'])
             embed.add_field(name="Loading...", value="by Loading...", inline=True)
-            embed.set_footer(text="{} ⭐{} | {}".format(p["DATE"], p["STARS"],
-                                                        ','.join(p['TAGS'])))
+            tagline = ("🔖 " if p['TAGS'] else "No tags") + (', '.join(p['TAGS']))
+            embed.set_footer(text="{} - {} ⭐ - {}".format(p["DATE"], p["STARS"], tagline))
             if p['THUMB']:
                 embed.set_image(url=p["THUMB"])
             self.embeds.append(embed)
