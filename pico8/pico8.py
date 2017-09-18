@@ -1,7 +1,6 @@
 import discord
 from discord.ext import commands
 from cogs.utils.dataIO import dataIO
-from cogs.utils import checks
 from bs4 import BeautifulSoup
 from bs4 import Comment
 import asyncio
@@ -10,8 +9,6 @@ import aiohttp
 import re
 import json
 from asyncio import Lock
-from random import randint
-from random import choice as randchoice
 from collections.abc import MutableSequence
 from __main__ import send_cmd_help
 from cogs import repl
@@ -71,7 +68,7 @@ class BBS:
         },
         "orderby": {
             "RECENT":        "ts",
-            "FEATURED":      "rating",  
+            "FEATURED":      "rating",
             "RATING":        "rating",
             "FAVORITES":     "favourites",
             "FAVOURITES":    "favourites"
@@ -97,7 +94,7 @@ class BBS:
 
     def queue_area(self, i):
         self.posts[i]
-        self.queue.extend([i, (i + 1) % len(self.posts), 
+        self.queue.extend([i, (i + 1) % len(self.posts),
                               (i - 1) % len(self.posts)])
 
     async def __aenter__(self):
@@ -121,7 +118,7 @@ class BBS:
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
         js_posts = re.search(BBS.RE_POSTS, raw).group(1)
-        cleanse = {'\r': '', '\n': '', '\t': '', '`': '"', 
+        cleanse = {'\r': '', '\n': '', '\t': '', '`': '"',
                    ',]': ']', ',,': ',null,'}
         for p, r in cleanse.items():
             js_posts = js_posts.replace(p, r)
@@ -155,7 +152,7 @@ class BBS:
                        "SUB": p[16],
                        "CID": p[17],
                        "PNG": None if ((p[15] not in (6,7)) or p[17] is None) else
-                              self.url + ('cposts/{}/{}.p8.png' if p[15] == 7 else 
+                              self.url + ('cposts/{}/{}.p8.png' if p[15] == 7 else
                                           'cposts/{}/cpost{}.png').format(p[17] // 10000, p[17]),
                        "CART_TITLE": None,  # temp
                        "CART_AUTHOR": None,  # temp
@@ -165,8 +162,8 @@ class BBS:
                        "PARAM": {"tid": p[1]}} for p in posts]
 
         for p in self.posts:
-            embed=discord.Embed(title=p["TITLE"], url=p["URL"],
-                                description="Loading...")
+            embed = discord.Embed(title=p["TITLE"], url=p["URL"],
+                                  description="Loading...")
             embed.set_author(name=p["AUTHOR"], url=p["AUTHOR_URL"],
                              icon_url=p["AUTHOR_PIC"])
             if p['PNG']:
@@ -217,7 +214,7 @@ class BBS:
         # author pic
         ava = main.center.img['src']
         if not ava.startswith('http'):
-            ava = self.url[:-5] + ava 
+            ava = self.url[:-5] + ava
         post['AUTHOR_PIC'] = ava
         embed.set_author(name=embed.author.name, url=embed.author.url,
                          icon_url=post['AUTHOR_PIC'])
@@ -238,7 +235,7 @@ class BBS:
             links = cart.find_all('a')
             post['CART_TITLE'] = links[0].text
             post['CART_AUTHOR'] = links[1].text
-            embed.set_field_at(0, name=post['CART_TITLE'], 
+            embed.set_field_at(0, name=post['CART_TITLE'],
                                value='by {}'.format(post['CART_AUTHOR']))
         else:
             embed.clear_fields()
@@ -255,11 +252,11 @@ class BBS:
             ctitle = ct.find_all('a')[0].text
             ct.parent.parent.insert_after(soup.new_string('[{}]'.format(ctitle)))
             ct.parent.parent.extract()
-            
+
         # remove all scripts, styles, comments
         for sc in main(['script', 'style']):
             sc.extract()
-        for cmt in main.find_all(string=lambda text:isinstance(text, Comment)):
+        for cmt in main.find_all(string=lambda text: isinstance(text, Comment)):
             cmt.extract()
 
         # replace brs with 2 no-break spaces to be replaced later
@@ -279,7 +276,6 @@ class BBS:
             embed.description = post['DESC'] + '...'
         else:
             embed.description = None
-
 
     def _get_post_index(self, index_or_id):
         try:
@@ -315,9 +311,7 @@ class BBS:
                         working_group.append(i)
                 for i in working_group:
                     self.loop.create_task(self._populate_post(i))
-            await asyncio.sleep(.5) 
-
-
+            await asyncio.sleep(.5)
 
     def set_param(self, param, value_name):
         self.params[param] = self.get_value(param, value_name)
