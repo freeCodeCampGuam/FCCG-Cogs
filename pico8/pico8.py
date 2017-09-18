@@ -6,6 +6,7 @@ from bs4 import Comment
 import asyncio
 import os
 import aiohttp
+from urllib.request import quote
 import re
 import json
 from asyncio import Lock
@@ -135,7 +136,7 @@ class BBS:
                        "TID": p[1],
                        "TITLE": p[2],
                        "DESC": None,  # temp
-                       "THUMB": self.url + ('..' + p[3] if p[3][0] == '/' else p[3]),
+                       "THUMB": self.url + quote('..' + p[3] if p[3][0] == '/' else p[3]),
                        "DATE": p[6],
                        "AID": p[7],
                        "AUTHOR": p[8],
@@ -211,7 +212,7 @@ class BBS:
         # author pic
         ava = main.center.img['src']
         if not ava.startswith('http'):
-            ava = self.url[:-5] + ava
+            ava = self.url[:-5] + quote(ava)
         post['AUTHOR_PIC'] = ava
         embed.set_author(name=embed.author.name, url=embed.author.url,
                          icon_url=post['AUTHOR_PIC'])
@@ -221,12 +222,12 @@ class BBS:
             bg = re.search(BBS.RE_CART_BG, cart['style']).group(1)
             # image
             if not post['THUMB'].endswith(bg):
-                post['THUMB'] = self.url + bg
+                post['THUMB'] = self.url + quote(bg)
                 embed.set_image(url=post['THUMB'])
             # thumbnail
             png = cart.parent.find_next_sibling().a['href']
             if post['PNG'] is None or not post['PNG'].endswith(png):
-                post['PNG'] = self.url[:-5] + png
+                post['PNG'] = self.url[:-5] + quote(png)
                 embed.set_thumbnail(url=post['PNG'])
             # cart title / author
             links = cart.find_all('a')
