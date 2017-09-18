@@ -169,7 +169,8 @@ class BBS:
                 embed.set_thumbnail(url=p['PNG'])
             embed.add_field(name="Loading...", value="by Loading...", inline=True)
             tagline = ("🔖 " if p['TAGS'] else "No tags") + (', '.join(p['TAGS']))
-            embed.set_footer(text="{} - {} ⭐ - {}".format(p["DATE"], p["STARS"], tagline))
+            embed.set_footer(text="{} - {} ⭐ - {}".format(p["DATE"], p["STARS"], tagline),
+                             icon_url='https://www.lexaloffle.com/gfx/set_cc0.png')
             if p['THUMB']:
                 embed.set_image(url=p["THUMB"])
             self.embeds.append(embed)
@@ -225,10 +226,17 @@ class BBS:
                 post['THUMB'] = self.url + quote(bg)
                 embed.set_image(url=post['THUMB'])
             # thumbnail
-            png = cart.parent.find_next_sibling().a['href']
+            pngel = cart.parent.find_next_sibling()
+            png = pngel.a['href']
             if post['PNG'] is None or not post['PNG'].endswith(png):
                 post['PNG'] = self.url[:-5] + quote(png)
                 embed.set_thumbnail(url=post['PNG'])
+            # CC
+            cc = pngel.find_next_sibling().find_next_sibling()
+            post['CC'] = cc.img['src'] == '/gfx/set_cc1.png'
+            if post['CC']:
+                embed.set_footer(text=embed.footer.text,
+                                 icon_url=self.url[:-5] + '/gfx/set_cc1.png')
             # cart title / author
             links = cart.find_all('a')
             post['CART_TITLE'] = links[0].text
