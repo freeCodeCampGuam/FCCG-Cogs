@@ -16,6 +16,7 @@ from cogs import repl
 
 
 SETTINGS_PATH = "data/pico8/settings.json"
+PICKS_PATH =    "data/pico8/picks.json"
 NBS = '​'
 
 
@@ -91,6 +92,7 @@ class BBS:
         self.embeds = []
         self.load_tasks = ReactiveList(callback=self.queue_area)
         self.locks = []
+        self.picks = dataIO.load_json(PICKS_PATH)
 
     def queue_area(self, i):
         self.posts[i]
@@ -117,7 +119,31 @@ class BBS:
     async def _populate_results(self):
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
-        js_posts = re.search(BBS.RE_POSTS, raw).group(1)
+        async def self_destruct():
+            raise RuntimeError
+
+        try:
+            js_posts = re.search(BBS.RE_POSTS, raw).group(1)
+        except AttributeError:  # no results
+            self.load_tasks = [
+                "No results found", "I said there're no results",
+                ":neutral_face:", ":confused:", "what..", 
+                "what do you expect to be here?", 
+                "I mean it's not like I'd spend time",
+                "filling a bunch of flavor text", "for no reason", "...",
+                "..right?", "well..", 
+                "I guess you could look at some of these",
+                *self.picks,  # put through convert to embeds
+                "and there's so much more! Now go make some of your own!",
+                "this message will self-destruct in...",'3','2','1',
+                self_destruct()
+            ]
+            self.load_tasks += self.load_tasks[::-1]
+            self.posts = []
+            self.embeds = []
+            self.locks = []
+            return
+
         cleanse = {'\r': '', '\n': '', '\t': '', '`': '"',
                    ',]': ']', ',,': ',null,'}
         for p, r in cleanse.items():
