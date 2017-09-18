@@ -81,9 +81,9 @@ class BBS:
         self.url = BBS.BASE
         self.search_term = search
         self.loop = loop
-        self.orderby = orderby
+        self.orderby = params.get('orderby', orderby)
         self.params = {}
-        for p, v in self.params.items():
+        for p, v in params.items():
             self.set_param(p, v)
         self.posts = []
         self.current_post = 0
