@@ -274,8 +274,11 @@ class BBS:
             for p, r in cleanse:
                 ps[i] = ps[i].replace(p, r)
 
-        post['DESC'] = '\n\n'.join(ps)[:150] + '...'
-        embed.description = post['DESC']
+        post['DESC'] = '\n\n'.join(ps)[:150]
+        if post['DESC'].strip():
+            embed.description = post['DESC'] + '...'
+        else:
+            embed.description = None
 
 
     def _get_post_index(self, index_or_id):
