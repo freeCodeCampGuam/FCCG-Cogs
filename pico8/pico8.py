@@ -49,8 +49,7 @@ class BBS:
     PARAMS = {
         "cat": {
             "VOXATRON":      "6",
-            "PICO8":         "7",
-            "BLOGS":         "8"
+            "PICO8":         "7"
         },
         "sub": {
             "DISCUSSIONS":   "1",
@@ -70,7 +69,7 @@ class BBS:
             "RECENT":        "ts",
             "FEATURED":      "rating",
             "RATING":        "rating",
-            "FAVORITES":     "favourites",
+            "FAVORITES":     "favourites",  # shouldn't be used by bot (yet?)
             "FAVOURITES":    "favourites"
         }
     }
@@ -132,8 +131,7 @@ class BBS:
         # 7,3,38385,[],0]
         # 15:cat 16:subcat 17:cid 18:tags 19:resolved
 
-        self.posts = [{"OSOUP": soup,
-                       "PID": p[0],
+        self.posts = [{"PID": p[0],
                        "TID": p[1],
                        "TITLE": p[2],
                        "DESC": None,  # temp
@@ -208,7 +206,6 @@ class BBS:
         post = self.posts[index]
         raw = await self._get_post(index)
         soup = BeautifulSoup(raw, "html.parser")
-        post['SOUP'] = soup
 
         main = soup.find('div', id='p{}'.format(post['PID']))
         # author pic
