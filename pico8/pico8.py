@@ -389,31 +389,46 @@ Card:
 
 
 class Pico8:
-    """cog to search Lexaloffle's BBS and notify when new PICO-8 carts are uploaded"""
+    """cog to search Lexaloffle's bulletin board system
+    and notify when new PICO-8 carts are uploaded
+
+    [p]bbs [filters=?p8:recent] [search_terms] uses its own filter format.
+
+    filters must start with a question mark(?)
+    or else they will be treated as search terms
+
+    filters must be separated by a colon(:) 
+    but don't have to be in a particular order
+
+    If any part of a filter is left blank, the defaults will be used,
+    for example, `[p]bbs` will search for all recent pico8 carts
+
+    Use [p]help bbs for the list of filters available"""
 
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.searches = []
 
-    @commands.group(pass_context=True, no_pm=True, aliases=['pico8'])
-    async def bbs(self, ctx):
-        """PICO-8 bbs commands"""
-        if ctx.invoked_subcommand is None:
-            await send_cmd_help(ctx)
+    @commands.command(pass_context=True, no_pm=True, aliases=['pico8'])
+    async def bbs(self, ctx, *, filters="?p8:recent", search_terms=""):
+        """Search PICO-8's bbs with an optional filter
+        
+        use [p]help Pico8 for more info about filters
 
-    @bbs.command(pass_context=True, name="search", no_pm=True)
-    async def bbs_search(self, ctx, search_terms=""):  # category="Recent",
-        """Search PICO-8's bbs in a certain category
-
-        Categories (default Recent):
-            Recent       Discussion   Blogs
-            Carts        Collab       Workshop
-            Support      Jam          WIP
-            Snippets     Art          Music
-
-        leave search_term blank to list newest topics
-        in the category
+        Filters Available
+          System:
+              pico8 (p8) [default]
+              voxatron (vox)
+          Category:
+              [none] [default]
+              jams     snippets           discussions (discuss)
+              blogs    inprogress (wip)   collaboration (collab)
+              art      support            workshops (wkshop/shop)
+              music    cartridges (carts)
+          Order:
+              new [default]
+              stars
         """
         author = ctx.message.author
         server = ctx.message.server
