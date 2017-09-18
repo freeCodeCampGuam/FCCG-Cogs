@@ -421,11 +421,17 @@ class Pico8:
         in the category
         """
         author = ctx.message.author
+        server = ctx.message.server
+        msg = ctx.message
+
+        await self.bot.add_reaction(msg, '🔎')
+
         async with BBS(self.bot.loop, search_terms) as bbs:
-            self.searches.append(bbs)
-            await repl.interactive_results(self.bot, ctx, bbs.load_tasks)
-            answer = await self.bot.wait_for_message(timeout=15,
-                                                     author=author, content="done")
+            # self.searches.append(bbs)  # add caching later?
+            await asyncio.gather(
+                repl.interactive_results(self.bot, ctx, bbs.load_tasks),
+                self.bot.remove_reaction(msg, '🔎', server.me)
+            )
 
 
 def check_folders():
