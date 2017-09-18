@@ -432,11 +432,11 @@ class Pico8:
               [none] [default]
               jams     snippets           discussions (discuss)
               blogs    inprogress (wip)   collaboration (collab)
-              art      support            workshops (wkshop/shop)
+              arts     support            workshops (wkshop/shop)
               music    cartridges (carts)
           Order:
               new [default]
-              stars
+              rating
         """
         author = ctx.message.author
         server = ctx.message.server
@@ -454,7 +454,7 @@ class Pico8:
                 "blogs": "BLOGS",
                 "inprogress": "WIP", "wip": "WIP",
                 "collaboration": "COLLABORATION", "collab": "COLLABORATION",
-                "art": "ART",
+                "arts": "ART",
                 "support": "SUPPORT",
                 "workshops": "WORKSHOPS", "wkshop": "WORKSHOPS",
                 "shop": "WORKSHOPS",
@@ -463,7 +463,7 @@ class Pico8:
             },
             "orderby": {
                 "new": "RECENT",
-                "stars": "FEATURED"
+                "rating": "FEATURED"
             }
         }
 
