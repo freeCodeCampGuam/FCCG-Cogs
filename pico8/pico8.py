@@ -3,6 +3,7 @@ from discord.ext import commands
 from cogs.utils.dataIO import dataIO
 from cogs.utils import checks
 from bs4 import BeautifulSoup
+from bs4 import Comment
 import asyncio
 import os
 import aiohttp
@@ -17,6 +18,7 @@ from cogs import repl
 
 
 SETTINGS_PATH = "data/pico8/settings.json"
+NBS = '​'
 
 
 class ReactiveList(MutableSequence):
@@ -76,6 +78,7 @@ class BBS:
         }
     }
     RE_POSTS = re.compile(r"var pdat=(.*?);\r\n\t\tvar updat", re.DOTALL)
+    RE_CART_BG = re.compile("background:url\('(.*?)'\)", re.DOTALL)
 
     def __init__(self, loop, search, orderby="RECENT", params={}):
         self.url = BBS.BASE
@@ -189,7 +192,6 @@ class BBS:
         # hope this doesn't fail
         index = self._get_post_index(index_or_id)
         post = post or self.posts[index]
-        embed = self.embeds[index]
         # needlessly complicated
         if post['STATUS'] == 'success':
             return True
@@ -198,16 +200,83 @@ class BBS:
                 return True
             post['STATUS'] = 'processing'
             try:
-                index = self._get_post_index(index_or_id)
-                raw = await self._get_post(index)
-                soup = BeautifulSoup(raw, "html.parser")
-                # continue
-                post['SOUP'] = soup
-                embed.description = 'Done'
+                await self._update_embed(index)
             except Exception as e:
                 post['STATUS'] = 'failed'
                 raise e
             post['STATUS'] = 'success'
+
+    async def _update_embed(self, index):
+        embed = self.embeds[index]
+        post = self.posts[index]
+        raw = await self._get_post(index)
+        soup = BeautifulSoup(raw, "html.parser")
+        post['SOUP'] = soup
+
+        main = soup.find('div', id='p{}'.format(post['PID']))
+        # author pic
+        ava = main.center.img['src']
+        if not ava.startswith('http'):
+            ava = self.url[:-5] + ava 
+        post['AUTHOR_PIC'] = ava
+        embed.set_author(name=embed.author.name, url=embed.author.url,
+                         icon_url=post['AUTHOR_PIC'])
+
+        cart = soup.find('div', id=re.compile(r'infodiv*'))
+        if cart:
+            bg = re.search(BBS.RE_CART_BG, cart['style']).group(1)
+            # image
+            if not post['THUMB'].endswith(bg):
+                post['THUMB'] = self.url + bg
+                embed.set_image(url=post['THUMB'])
+            # thumbnail
+            png = cart.parent.find_next_sibling().a['href']
+            if post['PNG'] is None or not post['PNG'].endswith(png):
+                post['PNG'] = self.url[:-5] + png
+                embed.set_thumbnail(url=post['PNG'])
+            # cart title / author
+            links = cart.find_all('a')
+            post['CART_TITLE'] = links[0].text
+            post['CART_AUTHOR'] = links[1].text
+            embed.set_field_at(0, name=post['CART_TITLE'], 
+                               value='by {}'.format(post['CART_AUTHOR']))
+        else:
+            embed.clear_fields()
+
+        # description
+        # try remove the cart(s)
+        try:
+            # first one we don't want to see
+            cart.parent.parent.extract()
+        except AttributeError:
+            pass
+        # other carts we might want info on title
+        for ct in soup.find_all('div', id=re.compile(r'infodiv*')):
+            ctitle = ct.find_all('a')[0].text
+            ct.parent.parent.insert_after(soup.new_string('[{}]'.format(ctitle)))
+            ct.parent.parent.extract()
+            
+        # remove all scripts, styles, comments
+        for sc in main(['script', 'style']):
+            sc.extract()
+        for cmt in main.find_all(string=lambda text:isinstance(text, Comment)):
+            cmt.extract()
+
+        # replace brs with 2 no-break spaces to be replaced later
+        print('-'*20,post['TITLE'])
+        for br in main.find_all('br'):
+            br.replace_with(soup.new_string(NBS + NBS))
+
+        ps = [p.text.strip() for p in main.find_all('p')]
+
+        # clean out unwanted \r \n and put brs back in as \n
+        cleanse = (('\r', ''), ('\n', ''), (NBS + NBS, '\n'))
+        for i in range(len(ps)):
+            for p, r in cleanse:
+                ps[i] = ps[i].replace(p, r)
+
+        post['DESC'] = '\n\n'.join(ps)[:150] + '...'
+        embed.description = post['DESC']
 
 
     def _get_post_index(self, index_or_id):
