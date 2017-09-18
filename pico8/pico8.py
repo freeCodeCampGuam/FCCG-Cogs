@@ -263,7 +263,6 @@ class BBS:
             cmt.extract()
 
         # replace brs with 2 no-break spaces to be replaced later
-        print('-'*20,post['TITLE'])
         for br in main.find_all('br'):
             br.replace_with(soup.new_string(NBS + NBS))
 
