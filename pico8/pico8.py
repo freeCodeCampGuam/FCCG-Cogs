@@ -159,6 +159,8 @@ class BBS:
             print('erroring page in ' + ERROR_PATH)
             with open(ERROR_PATH, 'w+') as f:
                 f.write(raw)
+                f.write('\n\n' + '{:-^50}'.format('scraped'))
+                f.write(js_posts)
                 f.write('\n\n' + '-'*50)
             self.load_tasks = ['Looks like there was an error :/ '
                                'This is just scraping the forum, '
