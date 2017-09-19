@@ -17,7 +17,7 @@ from cogs import repl
 
 SETTINGS_PATH = "data/pico8/settings.json"
 PICKS_PATH =    "data/pico8/picks.json"
-ERROR_PATH =    "dara/pico8/error.log"
+ERROR_PATH =    "data/pico8/error.log"
 NBS = '​'
 
 
