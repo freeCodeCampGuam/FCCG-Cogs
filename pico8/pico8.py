@@ -17,6 +17,7 @@ from cogs import repl
 
 SETTINGS_PATH = "data/pico8/settings.json"
 PICKS_PATH =    "data/pico8/picks.json"
+ERROR_PATH =    "dara/pico8/error.log"
 NBS = '​'
 
 
@@ -145,6 +146,15 @@ class BBS:
             self.posts = []
             self.embeds = []
             self.locks = []
+            return
+        except json.decoder.JSONDecodeError as e:
+            print('erroring page in ' + ERROR_PATH)
+            with open(ERROR_PATH, 'w+') as f:
+                f.write(raw)
+                f.write('\n\n' + '-'*50)
+            self.load_tasks = ['Looks like there was an error :/ '
+                               'This is just scraping the forum, '
+                               'so there is the possibility this\'ll break']
             return
 
         cleanse = {'\r': '', '\n': '', '\t': '', '`': '"',
