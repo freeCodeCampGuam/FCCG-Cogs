@@ -529,7 +529,8 @@ class Pico8:
         async with BBS(self.bot.loop, search_terms, params=params) as bbs:
             # self.searches.append(bbs)  # add caching later?
             await asyncio.gather(
-                repl.interactive_results(self.bot, ctx, bbs.load_tasks),
+                repl.interactive_results(self.bot, ctx, bbs.load_tasks, 
+                                         timeout=60 * 5),
                 self.bot.remove_reaction(msg, '🔎', server.me)
             )
 
