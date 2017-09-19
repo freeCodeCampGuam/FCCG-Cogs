@@ -147,6 +147,14 @@ class BBS:
             self.embeds = []
             self.locks = []
             return
+
+        cleanse = {'\r': '', '\n': '', '\t': '', '`': '"',
+                   ',]': ']', ',,': ',null,'}
+        for p, r in cleanse.items():
+            js_posts = js_posts.replace(p, r)
+
+        try:
+            posts = json.loads(js_posts)
         except json.decoder.JSONDecodeError as e:
             print('erroring page in ' + ERROR_PATH)
             with open(ERROR_PATH, 'w+') as f:
@@ -156,12 +164,6 @@ class BBS:
                                'This is just scraping the forum, '
                                'so there is the possibility this\'ll break']
             return
-
-        cleanse = {'\r': '', '\n': '', '\t': '', '`': '"',
-                   ',]': ']', ',,': ',null,'}
-        for p, r in cleanse.items():
-            js_posts = js_posts.replace(p, r)
-        posts = json.loads(js_posts)
         # [38386, 28997, `Poop Blaster`,"thumbs/pico38385.png",
         #  0:pid 1:tid 2:title 3:thumb
         # 64,64,"2017-03-18",15018,"chase","2017-03-19",9551,
