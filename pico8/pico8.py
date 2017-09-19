@@ -120,7 +120,7 @@ class BBS:
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
         async def self_destruct():
-            raise RuntimeError
+            raise RuntimeError("KABOOM!")
 
         try:
             js_posts = re.search(BBS.RE_POSTS, raw).group(1)
