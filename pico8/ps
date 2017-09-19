@@ -1,0 +1,34 @@
+#!/bin/bash
+
+#wip. trying to get pico-8 ..port? to look in wireshark
+#https://itsmetommy.com/2011/06/15/how-do-you-find-the-parent-process/
+#https://superuser.com/questions/627391/how-to-use-netstat-to-show-what-process-is-listening-on-a-port
+
+for i in {1..50} 
+do
+#	PICID=ps -A | grep pico | awk '{print $1}'
+#	lsof -i | awk '{print $0}' | ps -l | grep -v grep
+	lsof -i | grep curl
+done
+
+# search: http://www.lexaloffle.com/bbs/cpost_lister3.php?max=32&start_index=0&cat=7&search=yes&max=32&version=000110cm
+# select game: http://www.lexaloffle.com/bbs/cposts/3/39705.p8.png
+# featured: http://www.lexaloffle.com/bbs/cpost_lister3.php?max=32&start_index=0&cat=7&sub=2&orderby=rating&version=000110cm
+# new: http://www.lexaloffle.com/bbs/cpost_lister3.php?max=32&start_index=0&cat=7&sub=2&version=000110cm
+
+# discussion: sub=1
+# cartridges: sub=2
+# 	new: sub=2
+# 	featured: sub=2&orderby=rating
+# wip: sub=3
+# collab: sub=4
+# workshop: sub=5
+# support: sub=6
+# blogs: sub=7
+# jam: sub=8
+# snippets: sub=9
+# pixels: sub=10
+# music: sub=11
+
+# now that we have the location
+# how to get metadata from images? someone said "greyscale"

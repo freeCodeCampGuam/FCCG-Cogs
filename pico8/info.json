@@ -1,0 +1,9 @@
+{
+    "AUTHOR" : "irdumb",
+    "INSTALL_MSG" : "You've discovered the love that is PICO-8!",
+    "NAME" : "pico8",
+    "SHORT" : "Lexaloffle BBS search and notifications",
+    "DESCRIPTION" : "Lets you search Lexaloffle's BBS for PICO-8 topics/carts and allows for notifications when new carts are uploaded",
+    "REQUIREMENTS": ["beautifulsoup4"],
+    "TAGS" : ["PICO-8", "pico8", "search", "notification", "announcement"]
+}
