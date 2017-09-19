@@ -187,19 +187,7 @@ class BBS:
                        "PARAM": {"tid": p[1]}} for p in posts]
 
         for p in self.posts:
-            embed = discord.Embed(title=p["TITLE"], url=p["URL"],
-                                  description="Loading...")
-            embed.set_author(name=p["AUTHOR"], url=p["AUTHOR_URL"],
-                             icon_url=p["AUTHOR_PIC"])
-            if p['PNG']:
-                embed.set_thumbnail(url=p['PNG'])
-            embed.add_field(name="Loading...", value="by Loading...", inline=True)
-            tagline = ("🔖 " if p['TAGS'] else "No tags") + (', '.join(p['TAGS']))
-            embed.set_footer(text="{} - {} ⭐ - {}".format(p["DATE"], p["STARS"], tagline),
-                             icon_url='https://www.lexaloffle.com/gfx/set_cc0.png')
-            if p['THUMB']:
-                embed.set_image(url=p["THUMB"])
-            self.embeds.append(embed)
+            self.embeds.append(None)
             self.locks.append(Lock())
 
         async def gen_embed(i):
@@ -210,6 +198,28 @@ class BBS:
 
         await self._populate_post(0)
         self.queue_area(0)
+
+    def _post_to_embed(self, post):
+        # this whole embed business should be moved into the Pico8 class
+        p = post
+
+        embed = discord.Embed(title=p['TITLE'], url=p['URL'],
+                              description=p['DESC'] if p['DESC'].strip() else None)
+        embed.set_author(name=p['AUTHOR'], url=p['AUTHOR_URL'],
+                         icon_url=p['AUTHOR_PIC'])
+        tagline = ("🔖 " if p['TAGS'] else "No tags") + (', '.join(p['TAGS']))
+        footer_kw = {}
+        if p['CART_TITLE'] is not None:
+            embed.set_thumbnail(url=p['PNG'])
+            embed.add_field(name=p['CART_TITLE'], inline=True,
+                            value='by {}'.format(p['CART_AUTHOR']))
+            embed.set_image(url=p['THUMB'])
+            cc = self.url[:-5] + "/gfx/set_cc{}.png".format(1 if p['CC'] else 0)
+            footer_kw['icon_url'] = cc
+        embed.set_footer(text="{} - {} ⭐ - {}".format(p['DATE'], p['STARS'], 
+                                                       tagline),
+                         **footer_kw)
+        return embed
 
     async def _populate_post(self, index_or_id, post=None):
         # hope this doesn't fail
@@ -223,14 +233,15 @@ class BBS:
                 return True
             post['STATUS'] = 'processing'
             try:
-                await self._update_embed(index)
+                await self._load_post(index)
             except Exception as e:
                 post['STATUS'] = 'failed'
                 raise e
+            else:
+                self.embeds[index] = self._post_to_embed(post)
             post['STATUS'] = 'success'
 
-    async def _update_embed(self, index):
-        embed = self.embeds[index]
+    async def _load_post(self, index):
         post = self.posts[index]
         raw = await self._get_post(index)
         soup = BeautifulSoup(raw, "html.parser")
@@ -241,8 +252,6 @@ class BBS:
         if not ava.startswith('http'):
             ava = self.url[:-5] + quote(ava)
         post['AUTHOR_PIC'] = ava
-        embed.set_author(name=embed.author.name, url=embed.author.url,
-                         icon_url=post['AUTHOR_PIC'])
 
         cart = soup.find('div', id=re.compile(r'infodiv*'))
         if cart:
@@ -250,27 +259,18 @@ class BBS:
             # image
             if not post['THUMB'].endswith(bg):
                 post['THUMB'] = self.url + quote(bg)
-                embed.set_image(url=post['THUMB'])
             # thumbnail
             pngel = cart.parent.find_next_sibling()
             png = pngel.a['href']
             if post['PNG'] is None or not post['PNG'].endswith(png):
                 post['PNG'] = self.url[:-5] + quote(png)
-                embed.set_thumbnail(url=post['PNG'])
             # CC
             cc = pngel.find_next_sibling().find_next_sibling()
             post['CC'] = cc.img['src'] == '/gfx/set_cc1.png'
-            if post['CC']:
-                embed.set_footer(text=embed.footer.text,
-                                 icon_url=self.url[:-5] + '/gfx/set_cc1.png')
             # cart title / author
             links = cart.find_all('a')
             post['CART_TITLE'] = links[0].text
             post['CART_AUTHOR'] = links[1].text
-            embed.set_field_at(0, name=post['CART_TITLE'],
-                               value='by {}'.format(post['CART_AUTHOR']))
-        else:
-            embed.clear_fields()
 
         # description
         # try remove the cart(s)
@@ -305,9 +305,7 @@ class BBS:
 
         post['DESC'] = '\n\n'.join(ps)[:150]
         if post['DESC'].strip():
-            embed.description = post['DESC'] + '...'
-        else:
-            embed.description = None
+            post['DESC'] += '...'
 
     def _get_post_index(self, index_or_id):
         try:
