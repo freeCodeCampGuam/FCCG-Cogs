@@ -148,9 +148,9 @@ class BBS:
             self.locks = []
             return
 
-        cleanse = {'\r': '', '\n': '', '\t': '', '`': '"',
-                   ',]': ']', ',,': ',null,'}
-        for p, r in cleanse.items():
+        cleanse = [('\r', ''), ('\n', ''), ('\t', ''), ('`', '"'),
+                   (',,', ',null,'), (',]', ']')]
+        for p, r in cleanse:
             js_posts = js_posts.replace(p, r)
 
         try:
