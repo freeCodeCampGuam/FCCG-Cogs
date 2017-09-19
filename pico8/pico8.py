@@ -93,6 +93,7 @@ class BBS:
         self.load_tasks = ReactiveList(callback=self.queue_area)
         self.locks = []
         self.picks = dataIO.load_json(PICKS_PATH)
+        # TODO: later, load them from the site in case of updates?
 
     def queue_area(self, i):
         self.posts[i]
@@ -120,6 +121,7 @@ class BBS:
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
         async def self_destruct():
+            await self.bot.say("KABOOM!")
             raise RuntimeError("KABOOM!")
 
         try:
@@ -131,14 +133,16 @@ class BBS:
                 "what do you expect to be here?", 
                 "I mean it's not like I'd spend time",
                 "filling a bunch of flavor text", "for no reason", "...",
-                "..right?", "well..", 
-                "I guess you could look at some of these",
-                *self.picks,  # put through convert to embeds
-                "and there's so much more! Now go make some of your own!",
-                "this message will self-destruct in...",'3','2','1',
+                "..right?", "...", "...", "...", "well..", 
+                "I guess you could look at some of these..",
+                *[(msg, self._post_to_embed(p)) for msg, p in self.picks],
+                ("And there's so much more!", 
+                 discord.Embed(title='Now go make some of your own!')),
+                ("this message will self-destruct in...", discord.Embed(title='3')),
+                discord.Embed(title='2'), discord.Embed(title='1'),
                 self_destruct()
             ]
-            self.load_tasks += self.load_tasks[::-1]
+            self.load_tasks += self.load_tasks[::-1][:-1]
             self.posts = []
             self.embeds = []
             self.locks = []
