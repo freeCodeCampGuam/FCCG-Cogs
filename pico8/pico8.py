@@ -121,7 +121,6 @@ class BBS:
         raw = await self._get()
         soup = BeautifulSoup(raw, "html.parser")
         async def self_destruct():
-            await self.bot.say("KABOOM!")
             raise RuntimeError("KABOOM!")
 
         try:
