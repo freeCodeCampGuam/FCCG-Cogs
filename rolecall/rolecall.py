@@ -36,17 +36,27 @@ async def post_role(self, role: discord.Role, channel: discord.Channel,
 def get_channel_by_name(server, name):
     channels = [c for c in server.channels if c.name==name]
     if len(channels) > 1:
-        raise MultipleChannelsWithThatName("There are multiple channels "
+        raise MultipleThingsWithThatName("There are multiple channels "
                                            "with the name: " + name)
     if len(channels) == 0:
-        raise NoChannelWithThatName("There is no channel "
-                                    "with tha name: " + name)
+        raise NothingWithThatName("There is no channel "
+                                  "with the name: " + name)
     return channels[0]
 
-class NoChannelWithThatName(Exception):
+def get_role_by_name(server, name):
+    roles = [c for c in server.roles if c.name==name]
+    if len(roles) > 1:
+        raise MultipleThingsWithThatName("There are multiple roles "
+                                         "with the name: " + name)
+    if len(roles) == 0:
+        raise NothingWithThatName("There is no role "
+                                  "with the name: " + name)
+    return roles[0]
+
+class NothingWithThatName(Exception):
     pass
 
-class MultipleChannelsWithThatName(Exception):
+class MultipleThingsWithThatName(Exception):
     pass
 
 
@@ -193,24 +203,6 @@ class RoleCall:
 
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
-
-    def _get_object_by_name(self, otype, server, name, ignore_case=True):
-        """returns object of specified type from server of specified name
-        otype is discord.Role or discord.Channel
-        """
-        types = {
-            discord.Role: 'roles',
-            discord.Channel: 'channels'
-        }
-        li = getattr(server, types[otype])
-        if ignore_case:
-            match = [i for i in li if i.name.lower() == name.lower()]
-        else:
-            match = [i for i in li if i.name == name]
-        if len(match) > 1:
-            raise Exception("More than one {} found".format(types[otype][:-1]))
-        return match[0]
-
 
 
 async def wait_for_first_response(tasks, converters):
