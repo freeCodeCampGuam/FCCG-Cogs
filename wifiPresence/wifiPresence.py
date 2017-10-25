@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+import asyncio
 
 from cogs.utils import checks
 from __main__ import send_cmd_help
@@ -17,7 +18,7 @@ class wifiPresence:
 
     def __init__(self, bot):
         self.bot = bot
-        self.scan_status = bool(False)
+        self.scan_status = None
 
     def scan_arp(self, ctx):
         self.output = subprocess.check_output("sudo arp-scan -l", shell=True)
@@ -36,11 +37,10 @@ class wifiPresence:
     @scan.command(pass_context = True)
     async def toggle(self, ctx):
         """Toggles scan on or off"""
-        status = self.scan_status
-        status = not status
-        if status:
+        self.scan_status = not self.scan_status
+        if self.scan_status:
             await self.bot.say("Scanning Started.")
-            while status:
+            while self.scan_status:
                 await scan_arp()
                 await asyncio.sleep(30)
         else:
