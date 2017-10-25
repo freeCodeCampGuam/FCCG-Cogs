@@ -11,6 +11,11 @@ class wifiPresence:
 
     def __init__(self, bot):
         self.bot = bot
+        self.scan_status = False
+
+    def scan_arp(self, ctx):
+        output = subprocess.check_output("sudo arp-scan -l", shell=True)
+        return output
 
     @commands.group(name = "presence", pass_context = True)
     async def presence(self,ctx):
@@ -23,13 +28,13 @@ class wifiPresence:
             await send_cmd_help(ctx)
 
     @scan.command(pass_context = True)
-    async def toggle(self, ctx, scan_status: bool = None):
+    async def toggle(self, ctx):
         """Toggles scan on or off"""
-        scan_status = not scan_status
-        if (scan_status):
+        self.scan_status = not self.scan_status
+        if self.scan_status:
             await self.bot.say("Scanning Started.")
-            while (scan_status):
-                output = subprocess.check_output("sudo arp-scan -l", shell=True)
+            while self.scan_status:
+                await scan_arp()
                 await asyncio.sleep(30)
         else:
             await self.bot.say("Scanning Stopped.")
@@ -38,6 +43,7 @@ class wifiPresence:
     @scan.command(pass_context = True)
     async def log(self,ctx):
         """Prints out a log of connected devices"""
+        await scan_arp
         readable_output = output.decode("utf-8")
         await self.bot.whisper("```" + readable_output + "```")
         await self.bot.say("Sent you a PM")
