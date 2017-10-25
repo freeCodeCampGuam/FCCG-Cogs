@@ -1,14 +1,17 @@
 import discord
 from discord.ext import commands
-import subprocess
+
 from cogs.utils import checks
+from __main__ import set_cog, send_cmd_help, settings
+
+import subprocess
 
 class wifiPresence:
     """My custom cog that does stuff!"""
 
     def __init__(self, bot):
         self.bot = bot
-        self.scan_status = False
+        scan_status = False
 
     @commands.group(name = "presence", pass_context = True)
     async def presence(self,ctx):
