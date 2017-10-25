@@ -36,10 +36,11 @@ class wifiPresence:
     @scan.command(pass_context = True)
     async def toggle(self, ctx):
         """Toggles scan on or off"""
-        self.scan_status = not self.scan_status
-        if self.scan_status:
+        status = self.scan_status
+        status = not status
+        if status:
             await self.bot.say("Scanning Started.")
-            while self.scan_status:
+            while status:
                 await scan_arp()
                 await asyncio.sleep(30)
         else:
