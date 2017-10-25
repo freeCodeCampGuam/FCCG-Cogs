@@ -10,7 +10,7 @@ class wifiPresence:
         self.scan_status = False
 
     @commands.group(name = "presence", pass_context = True)
-    async def presnece(self,ctx):
+    async def presence(self,ctx):
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 

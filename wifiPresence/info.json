@@ -4,6 +4,6 @@
     "NAME" : "wifiPresence",
     "SHORT" : "Find out who's on your network",
     "DESCRIPTION" : "This cog allows you to scan your local network (assuming that the bot is hosted in a local network)",
-    "REQUIREMENTS": ["arp-scan"],
+    "REQUIREMENTS": [""],
     "TAGS" : ["utility"]
 }
