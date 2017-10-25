@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 import subprocess
+from cogs.utils import checks
 
 class wifiPresence:
     """My custom cog that does stuff!"""
