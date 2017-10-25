@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 
 from cogs.utils import checks
-from __main__ import set_cog, send_cmd_help, settings
+from __main__ import send_cmd_help
 
 import subprocess
 
@@ -17,7 +17,7 @@ class wifiPresence:
 
     def __init__(self, bot):
         self.bot = bot
-        self.scan_status = False
+        self.scan_status = bool(False)
 
     def scan_arp(self, ctx):
         self.output = subprocess.check_output("sudo arp-scan -l", shell=True)
