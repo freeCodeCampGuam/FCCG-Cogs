@@ -31,6 +31,13 @@ class wifiPresence:
         else:
             await self.bot.say("Scanning Stopped.")
 
+    @checks.is_owner()
+    @scan.command(pass_context = True)
+    """Prints out a log of connected devices"""
+    async def log(self,ctx):
+        readable_output = output.decode("utf-8")
+        await self.bot.whisper("```" + readable_output + "```")
+        await self.bot.say("Sent you a PM")
         
 
 def setup(bot):
