@@ -6,6 +6,12 @@ from __main__ import set_cog, send_cmd_help, settings
 
 import subprocess
 
+#TODO: Use JSON to store settings for toggling
+
+#TODO: Create function to assign names to MAC Addresses
+#TODO: Create function to peridically scan and notify when a specified name
+#      appears in the network
+
 class wifiPresence:
     """My custom cog that does stuff!"""
 
