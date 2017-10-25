@@ -20,8 +20,8 @@ class wifiPresence:
             await send_cmd_help(ctx)
 
     @scan.command(pass_context = True)
-    """Toggles scan on or off"""
     async def toggle(self, ctx):
+    """Toggles scan on or off"""
         scan_status = not scan_status
         if (scan_status):
             await self.bot.say("Scanning Started.")
@@ -33,8 +33,8 @@ class wifiPresence:
 
     @checks.is_owner()
     @scan.command(pass_context = True)
-    """Prints out a log of connected devices"""
     async def log(self,ctx):
+    """Prints out a log of connected devices"""
         readable_output = output.decode("utf-8")
         await self.bot.whisper("```" + readable_output + "```")
         await self.bot.say("Sent you a PM")
