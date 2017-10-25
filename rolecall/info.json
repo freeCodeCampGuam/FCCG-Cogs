@@ -1,0 +1,10 @@
+{
+    "AUTHOR" : "irdumb",
+    "INSTALL_MSG" : "You may now force people to assume roles.",
+    "NAME" : "rolecall",
+    "SHORT" : "Assign roles to server members",
+    "DESCRIPTION" : "Grant a role to members of your server.",
+    "TAGS" : ["role", "group", "classify", "tag", "label"],
+    "REQUIREMENTS" : [""],
+    "HIDDEN" : true
+}

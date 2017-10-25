@@ -1,0 +1,10 @@
+{
+    "AUTHOR" : "irdumb", "gmcaguilar"
+    "INSTALL_MSG" : "Time to make it rain....keys!",
+    "NAME" : "keydistrib",
+    "SHORT" : "Distribute keys with simple commands",
+    "DESCRIPTION" : "Distribute keys with easy commands as the cog does all the hard work of obtaining a key from a list, distributing a key, and managing key information.",
+    "TAGS" : ["key", "distribute", "release"],
+    "REQUIREMENTS" : [""],
+    "HIDDEN" : false
+}
