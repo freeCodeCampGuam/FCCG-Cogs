@@ -11,7 +11,6 @@ class wifiPresence:
 
     def __init__(self, bot):
         self.bot = bot
-        scan_status = False
 
     @commands.group(name = "presence", pass_context = True)
     async def presence(self,ctx):
@@ -24,7 +23,7 @@ class wifiPresence:
             await send_cmd_help(ctx)
 
     @scan.command(pass_context = True)
-    async def toggle(self, ctx):
+    async def toggle(self, ctx, scan_status: bool = None):
         """Toggles scan on or off"""
         scan_status = not scan_status
         if (scan_status):
