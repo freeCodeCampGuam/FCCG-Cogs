@@ -40,11 +40,13 @@ class WifiPresence:
         self.scan_status = not self.scan_status
         if self.scan_status:
             await self.bot.say("Scanning Started.")
-            while self.scan_status:
-                await WifiPresence.scan_arp(self)
-                await asyncio.sleep(30)
-        else:
-            await self.bot.say("Scanning Stopped.")
+            async def whilestatus():
+                while self.scan_status:
+                    await WifiPresence.scan_arp(self)
+                    await asyncio.sleep(30)
+            else:
+                await self.bot.say("Scanning Stopped.")
+            bot.loop.create_task(whilestatus())
 
     @checks.is_owner()
     @scan.command(pass_context = True)
