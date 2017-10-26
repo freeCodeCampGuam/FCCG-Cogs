@@ -41,7 +41,7 @@ class WifiPresence:
         if self.scan_status:
             await self.bot.say("Scanning Started.")
             while self.scan_status:
-                await WifiPresnece.scan_arp()
+                await WifiPresence.scan_arp()
                 await asyncio.sleep(30)
         else:
             await self.bot.say("Scanning Stopped.")
