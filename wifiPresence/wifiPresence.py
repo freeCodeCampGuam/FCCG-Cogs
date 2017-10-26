@@ -57,4 +57,4 @@ class WifiPresence:
         
 
 def setup(bot):
-    bot.add_cog(wifiPresence(bot))
+    bot.add_cog(WifiPresence(bot))
