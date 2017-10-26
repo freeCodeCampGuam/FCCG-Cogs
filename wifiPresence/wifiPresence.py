@@ -13,7 +13,7 @@ import subprocess
 #TODO: Create function to peridically scan and notify when a specified name
 #      appears in the network
 
-class wifiPresence:
+class WifiPresence:
     """My custom cog that does stuff!"""
 
     def __init__(self, bot):
@@ -21,16 +21,16 @@ class wifiPresence:
         self.scan_status = None
 
     def scan_arp(self, ctx):
-        self.output = subprocess.check_output("sudo arp-scan -l", shell=True)
-        return
+        output = subprocess.check_output("sudo arp-scan -l", shell=True)
+        return 
 
     @commands.group(name = "presence", pass_context = True)
-    async def presence(self,ctx):
+    async def presence(self, ctx):
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
-    @commands.group(name = "scan", pass_context = True)
-    async def scan(self,ctx):
+    @commands.group(name = "scan", pass_context =  True)
+    async def scan(self, ctx):
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
@@ -48,7 +48,7 @@ class wifiPresence:
 
     @checks.is_owner()
     @scan.command(pass_context = True)
-    async def log(self,ctx):
+    async def log(self, ctx):
         """Prints out a log of connected devices"""
         await scan_arp()
         readable_output = self.output.decode("utf-8")
