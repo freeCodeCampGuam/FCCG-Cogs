@@ -19,10 +19,10 @@ class WifiPresence:
     def __init__(self, bot):
         self.bot = bot
         self.scan_status = None
+        self.output = ""
 
     def scan_arp(self, ctx):
-        output = subprocess.check_output("sudo arp-scan -l", shell=True)
-        return 
+        self.output = subprocess.check_output("sudo arp-scan -l", shell=True)
 
     @commands.group(name = "presence", pass_context = True)
     async def presence(self, ctx):
@@ -41,7 +41,7 @@ class WifiPresence:
         if self.scan_status:
             await self.bot.say("Scanning Started.")
             while self.scan_status:
-                await scan_arp()
+                await WifiPresnece.scan_arp()
                 await asyncio.sleep(30)
         else:
             await self.bot.say("Scanning Stopped.")
