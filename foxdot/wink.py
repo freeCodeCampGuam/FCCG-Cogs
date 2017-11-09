@@ -1,0 +1,448 @@
+import discord
+from discord.ext import commands
+from cogs.utils import checks
+from cogs.utils.chat_formatting import pagify
+import traceback
+from contextlib import redirect_stdout
+import io
+import re
+import sys
+import asyncio
+from collections import deque
+from cogs.repl import interactive_results
+from cogs.repl import wait_for_first_response
+
+sys.path.insert(0, 'PATH_TO_TROOP')
+from src.interpreter import FoxDotInterpreter
+
+USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
+NBS = '​'
+
+
+# TODO: rewrite that whole pager nonsense
+# x: reaction remove fix
+# x: addwink can join in right away
+# x: page better
+# x: move user interpreter down
+# TODO: allow paging to go both ways
+# TODO: fix this in FoxDot   
+#       File "/usr/local/lib/python3.6/site-packages/FoxDot/lib/Patterns/Generators.py", line 60, in choose
+#           return self.data[self.choice(xrange(self.MAX_SIZE))]
+#       NameError: name 'xrange' is not defined
+# TODO: delete queue / try_delete after wait and check if session
+# TODO: clients / no-console mode (# of checks means how many clients connected!)
+# TODO: local execute only: keyword in msg (easier) or separate button
+# TODO: set up paths to work w/ FoxDot (and Troop if needed) in REQUIREMENTS
+
+
+_reaction_remove_events = set()
+
+
+class ReactionRemoveEvent(asyncio.Event):
+    def __init__(self, emojis, author, check=None):
+        super().__init__()
+        self.emojis = emojis
+        self.author = author
+        self.reaction = None
+        self.check = check
+
+    def set(self, reaction):
+        self.reaction = reaction
+        return super().set()
+
+
+class Wink:
+    """wink"""
+
+    def __init__(self, bot):
+        self.bot = bot
+        self.sessions = {}
+        self.settings = {'REPL_PREFIX': ['`']}
+
+    def cleanup_code(self, content):
+        """Automatically removes code blocks from the code."""
+        # remove ```py\n```
+        if content.startswith('```') and content.endswith('```'):
+            return '\n'.join(content.split('\n')[1:-1])
+
+        # remove `foo`
+        for p in self.settings["REPL_PREFIX"]:
+            if content.startswith(p):
+                if p == '`':
+                    return content.strip('` \n')
+                content = content[len(p):]
+                return content.strip(' \n')
+
+    @checks.is_owner()
+    @commands.command(pass_context=True)
+    async def addwink(self, ctx, member: discord.Member):
+        """addwink"""
+        channel = ctx.message.channel
+        author = ctx.message.author
+
+        if channel.id not in self.sessions:
+            return await self.bot.say('no winking is taking place in this channel')
+
+        await self.bot.say('stranger danger! you sure you wanna let '
+                           '{} wink? (yes/no)'.format(member.display_name), 
+                           delete_after=15)
+        answer = await self.bot.wait_for_message(timeout=15, author=author)
+        if not answer.content.lower().startswith('y'):
+            return await self.bot.say('yeah get away from us 😠', delete_after=5)
+
+        if await self.wait_for_interpreter(channel, self.sessions[channel.id],
+                                           member):
+            await self.bot.say('{} can now wink. man his eyes musta been dry '
+                               'as hell'.format(member.display_name),
+                               delete_after=10)
+
+
+    @checks.is_owner()
+    @commands.command(pass_context=True)
+    async def delwink(self, ctx, member: discord.Member):
+        """delwink"""
+        channel = ctx.message.channel
+        if channel.id not in self.sessions:
+            return await self.bot.say('no winking is taking place in this channel')
+
+        try:
+            del self.sessions[channel.id]['authors'][member.id]
+        except KeyError:
+            return await self.bot.say("{} already can't wink!"
+                                      "".format(member.display_name))
+        await self.bot.say("bad man {}! you're not allowed to wink "
+                           "anymore!".format(member.display_name))
+
+    @checks.is_owner()
+    @commands.command(pass_context=True, no_pm=True)
+    async def unwink(self, ctx):
+        """wake up"""
+        channel = ctx.message.channel
+
+        try:
+            self.kill(channel)
+        except KeyError:
+            return await self.bot.say("there's no wink session in this channel")
+        await self.bot.say('open your eyes')
+
+    def kill(self, channel):
+        self.sessions[channel.id]['repl'].kill()
+        console = self.sessions[channel.id]['console']
+        try:
+            self.sessions[channel.id]['pager_task'].cancel()
+        except:
+            print("not able to cancel {}'s pager".format(channel))
+        self.sessions[channel.id]['active'] = False
+        async def remove_console():
+            try:
+                print('removing {}'.format(console))
+                await self.bot.delete_message(console)
+            except:
+                pass
+        self.bot.loop.create_task(remove_console())
+        self.sessions[channel.id]['click_wait'].cancel()
+
+    async def start_console(self, ctx, session):
+        server = ctx.message.server
+        task = interactive_results(self.bot, ctx, session['pages'],
+                                   timeout=None, authors=server.members)
+        await asyncio.sleep(0.1)
+        task = self.bot.loop.create_task(task)
+        await asyncio.sleep(0.1)
+        answer = await self.bot.wait_for_message(timeout=15, author=server.me,
+                                                 check=lambda m: m.content.startswith(NBS))
+        session['console'] = answer
+        return task
+
+    async def replace_pages(self, session):
+        for i in range(len(session['pages'])):
+            if i > 0:
+                session['pages'].pop()
+        if session['pages']:
+            page = self.pager(session)()
+            session['pages'][0] = page
+            return page
+
+    def pager(self, session):
+        async def page():
+            discord_fmt = NBS + '```py\n{}\n```{}/{}'
+            output = '\n'.join([s.strip() for s in session['output']])
+            pages = [p for p in line_pagify(output, page_length=1400)]
+            res = pages[session['page_num']]
+            session['page_num'] -= 1
+            session['page_num'] %= len(pages)
+            # dirty semi-insurance
+            session['pages'].append(page())
+            self.bot.loop.create_task(self.replace_pages(session))
+            return discord_fmt.format(res.strip(), session['page_num'] + 1,
+                                      len(pages))
+        return page
+
+    @checks.is_owner()
+    @commands.command(pass_context=True, no_pm=True)
+    async def wink(self, ctx):
+        """start up the preview repl"""
+        channel = ctx.message.channel
+        author = ctx.message.author
+        server = ctx.message.server
+
+        if channel.id in self.sessions:
+            await self.bot.say("Already running a wink session in this channel")
+            return
+
+        self.sessions[channel.id] = {
+            'authors' : {},
+            'output'  : ['Welcome!!\nprint(SynthDefs) to see the instruments\n'
+                         'print(Player.Attributes()) to see their attributes!\n\n'
+                         'Single/Double letter players only. ex:\n'
+                         ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
+                         ' p2 >> play("(xo){[--]-}")\n'
+                         'execute a reset() or cls() to reposition your terminal\n'
+                         'execute a . to stop all sound\n'
+                         'close this console to reposition it also\n' + '-' * 51 + '\n'],
+            'console' : None,
+            'pages'   : [],
+            'page_num': 0,
+            'pager_task': None,
+            'repl'    : None,
+            'active'  : True,
+            'click_wait': None,
+            'update_console': False
+        }
+
+        session = self.sessions[channel.id]
+
+        if not await self.wait_for_interpreter(channel, session, author):
+            del self.sessions[channel.id]
+            return
+
+        # set up session's pager
+
+        session['pages'].append(self.pager(session)())
+
+        session['repl'] = FoxDotInterpreter()
+        await self.bot.say('psst, head into the voice channel')
+
+        session['pager_task'] = await self.start_console(ctx, session)
+
+        self.bot.loop.create_task(self.keep_console_updated(ctx, session))
+
+        while session['active']:
+
+            messages = [m for m in session['authors'].values()]
+            session['click_wait'] = self.bot.loop.create_task(wait_for_click(self.bot, messages, '☑'))
+            try:
+                response = await session['click_wait']
+            except asyncio.CancelledError:
+                response = None
+
+            if not session['active']:
+                break
+
+            if not response:
+                continue
+
+            winker = response.author
+
+            cleaned = self.cleanup_code(response.content)
+
+            if cleaned in ('quit', 'exit', 'exit()'):
+                self.kill(channel)
+                await self.bot.say('open your eyes')
+                break
+
+            # refresh user's interpreter
+            if cleaned in ('refresh', 'refresh()', 'cls', 'cls()', 'reset', 'reset()'):
+                task = self.wait_for_interpreter(channel, session, winker)
+                self.bot.loop.create_task(task)
+                continue
+
+            if cleaned == '.':
+                cleaned = 'Clock.clear()'
+
+
+            fmt = None
+            stdout = io.StringIO()
+            try:
+                with redirect_stdout(stdout):
+                    result = session['repl'].evaluate(cleaned)
+            except Exception as e:
+                value = stdout.getvalue()
+                fmt = '{}{}'.format(value, traceback.format_exc())
+            else:
+                value = stdout.getvalue()
+                if value:
+                    try:
+                        value = re.sub(USER_SPOT, winker.display_name, value)
+                    except AttributeError:
+                        pass
+                if result is not None:
+                    fmt = '{}{}'.format(value, result)
+                elif value:
+                    fmt = '{}'.format(value)
+            if fmt is None:
+                continue
+
+            if fmt == 'None':
+                session['output'].append('\n')
+            else:
+                session['output'].append(fmt)
+            session['page_num'] = -1
+
+            # ensure console update
+            session['update_console'] = True
+
+        del self.sessions[channel.id]
+
+
+    async def keep_console_updated(self, ctx, session):
+        channel = ctx.message.channel
+        while session['active']:
+            if not session['update_console']:
+                await asyncio.sleep(.5)
+                continue
+            try:
+                await self.bot.get_message(channel, session['console'].id)
+            except discord.NotFound:
+                session['pager_task'].cancel()
+                session['pager_task'] = await self.start_console(ctx, session)
+
+            try:
+                page = await self.replace_pages(session)
+                await self.bot.edit_message(session['console'],
+                                            new_content=await page)
+                await self.replace_pages(session)
+
+            except discord.Forbidden:
+                pass
+            except discord.HTTPException as e:
+                await self.bot.send_message(channel, 'Unexpected error: `{}`'.format(e))
+            session['update_console'] = False
+
+
+    async def wait_for_interpreter(self, channel, session, member):
+        fmt = '{} post a `code` message or a ```code-block``` to start your session'
+        prompt = await self.bot.send_message(channel,
+                                             fmt.format(member.mention))
+        def check(m):
+            ps = tuple(self.settings["REPL_PREFIX"])
+            return m.content.startswith(ps)
+        answer = await self.bot.wait_for_message(timeout=30, author=member,
+                                                 check=check, channel=channel)
+
+        if answer:
+            await self.bot.add_reaction(answer, '☑')
+            session['authors'][member.id] = answer
+            if self.sessions[channel.id]['click_wait']:
+                self.sessions[channel.id]['click_wait'].cancel()
+            await self.bot.delete_message(prompt)
+            try:
+                await self.bot.delete_message(answer)
+            except:
+                pass
+            return True
+        else:
+            after = await self.bot.send_message(channel, "{} didn't start a prompt soon "
+                                                         "enough".format(member.display_name))
+            await self.bot.delete_message(prompt)
+            await asyncio.sleep(1)
+            await self.bot.delete_message(after)
+            try:
+                await self.bot.delete_message(answer)
+            except:
+                pass
+            return False
+
+    async def on_reaction_remove(self, reaction, user):
+        """Handles watching for reactions for wait_for_reaction_remove"""
+        for event in _reaction_remove_events:
+            if (event and not event.is_set() and
+                event.check(reaction, user) and
+                reaction.emoji in event.emojis):
+                event.set(reaction)
+
+def line_pagify(s, lines_per_page=14, page_length=1960):
+    lines = s.split('\n')
+    i = 0
+    page = ''
+    lines_consumed = 0
+    while i < len(lines):
+        npage = page + '\n' + lines[i]
+        if len(npage) > page_length:  # go back to prev page
+            npage = page
+            if len(npage) == 0:
+                # if the next page is bigger than page_length on its own
+                # split on rightmost space
+                rightmost_space = lines[i][:page_length].rfind(' ')
+                # ensure it's below page_length if no space found
+                npage = lines[i][:rightmost_space][:page_length]
+                # adjust the next page and remove the space
+                lines[i] = lines[i][len(npage):].strip()
+            lines_consumed = 0
+            page = ''
+            yield npage
+            continue
+
+        npage = npage.strip()
+        i += 1
+        if lines_consumed != lines_per_page:
+            page = npage
+            lines_consumed += 1
+        else:
+            lines_consumed = 0
+            page = ''
+            yield npage
+    yield page
+
+
+async def wait_for_click(bot, messages, emoji):
+    def check(reaction, user):
+        user_allowed = user.id in [m.author.id for m in messages]
+        correct_msg = reaction.message.id in [m.id for m in messages]
+        return correct_msg and user_allowed
+
+    kwargs = {'emoji': [emoji], 'check': check}
+
+    tasks = (bot.wait_for_reaction(**kwargs),
+             wait_for_reaction_remove(bot, **kwargs))
+
+    def conv(r):
+        if not r:
+            return None
+        return r.reaction.message
+
+    return await wait_for_first_response(tasks, (conv, conv))
+
+
+async def wait_for_reaction_remove(bot, emoji=None, *, user=None,
+                                   timeout=None, message=None, check=None):
+    """Waits for a reaction to be removed by a user from a message within a time period.
+    Made to act like other discord.py wait_for_* functions but is not fully implemented.
+
+    Because of that, wait_for_reaction_remove(self, emoji: list, user, message, timeout=None)
+    is a better representation of this function's def
+
+    returns the actual event or None if timeout
+    """
+    if not emoji or isinstance(emoji, str):
+        raise NotImplementedError("wait_for_reaction_remove(self, emoji, "
+                                  "message, user=None, timeout=None, "
+                                  "check=None) is a better representation "
+                                  "of this function definition")
+    remove_event = ReactionRemoveEvent(emoji, user, check=check)
+    _reaction_remove_events.add(remove_event)
+    done, pending = await asyncio.wait([remove_event.wait()],
+                                       timeout=timeout)
+    still_in = remove_event in _reaction_remove_events
+    _reaction_remove_events.remove(remove_event)
+    try:
+        return done.pop().result() and still_in and remove_event
+    except:
+        return None
+
+
+
+
+def setup(bot):
+    n = Wink(bot)
+    bot.add_cog(n)
