@@ -29,7 +29,8 @@ NBS = '​'
 #       File "/usr/local/lib/python3.6/site-packages/FoxDot/lib/Patterns/Generators.py", line 60, in choose
 #           return self.data[self.choice(xrange(self.MAX_SIZE))]
 #       NameError: name 'xrange' is not defined
-# TODO: delete queue / try_delete after wait and check if session
+# x: delete queue / try_delete after wait and check if session
+#   TODO: make this a setting
 # TODO: clients / no-console mode (# of checks means how many clients connected!)
 # TODO: local execute only: keyword in msg (easier) or separate button
 # TODO: set up paths to work w/ FoxDot (and Troop if needed) in REQUIREMENTS
@@ -72,6 +73,24 @@ class Wink:
                     return content.strip('` \n')
                 content = content[len(p):]
                 return content.strip(' \n')
+
+    @checks.is_owner()
+    @commands.command(pass_context=True, no_pm=True)
+    async def cleanwink(self, ctx, seconds: int=None):
+        """how long to wait before cleaning up non-wink msgs in the wink channel
+
+        leave blank to toggle between not cleaning and 25 seconds"""
+        channel = ctx.message.channel
+        try:
+            if seconds is None:
+                seconds = self.session[channel.id]['clean_after']
+                seconds = -1 if seconds > 0 else 25
+            self.session[channel.id]['clean_after'] = seconds
+        except KeyError:
+            return await self.bot.say('There is no wink session in this channel')
+        if seconds == -1:
+            return await self.bot.say('will not clean new messages')
+        await self.bot.say('will clean new messages after {} seconds')
 
     @checks.is_owner()
     @commands.command(pass_context=True)
@@ -133,13 +152,7 @@ class Wink:
         except:
             print("not able to cancel {}'s pager".format(channel))
         self.sessions[channel.id]['active'] = False
-        async def remove_console():
-            try:
-                print('removing {}'.format(console))
-                await self.bot.delete_message(console)
-            except:
-                pass
-        self.bot.loop.create_task(remove_console())
+        self.bot.loop.create_task(try_delete(self.bot, console))
         self.sessions[channel.id]['click_wait'].cancel()
 
     async def start_console(self, ctx, session):
@@ -180,8 +193,11 @@ class Wink:
 
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
-    async def wink(self, ctx):
-        """start up the preview repl"""
+    async def wink(self, ctx, clean: int=-1):
+        """start up a collab FoxDot session
+        clean is how long to wait before deleting non-wink msgs
+        if clean is negative, msgs are not deleted
+        """
         channel = ctx.message.channel
         author = ctx.message.author
         server = ctx.message.server
@@ -207,7 +223,8 @@ class Wink:
             'repl'    : None,
             'active'  : True,
             'click_wait': None,
-            'update_console': False
+            'update_console': False,
+            'clean_after': clean
         }
 
         session = self.sessions[channel.id]
@@ -329,28 +346,19 @@ class Wink:
             return m.content.startswith(ps)
         answer = await self.bot.wait_for_message(timeout=30, author=member,
                                                  check=check, channel=channel)
-
         if answer:
             await self.bot.add_reaction(answer, '☑')
             session['authors'][member.id] = answer
             if self.sessions[channel.id]['click_wait']:
                 self.sessions[channel.id]['click_wait'].cancel()
-            await self.bot.delete_message(prompt)
-            try:
-                await self.bot.delete_message(answer)
-            except:
-                pass
+            await try_delete(self.bot, prompt)
             return True
         else:
             after = await self.bot.send_message(channel, "{} didn't start a prompt soon "
                                                          "enough".format(member.display_name))
-            await self.bot.delete_message(prompt)
+            await try_delete(self.bot, prompt)
             await asyncio.sleep(1)
-            await self.bot.delete_message(after)
-            try:
-                await self.bot.delete_message(answer)
-            except:
-                pass
+            await try_delete(self.bot, after)
             return False
 
     async def on_reaction_remove(self, reaction, user):
@@ -360,6 +368,58 @@ class Wink:
                 event.check(reaction, user) and
                 reaction.emoji in event.emojis):
                 event.set(reaction)
+
+    async def on_message(self, message):
+        channel = message.channel
+
+        # session doesn't exist
+        if channel.id not in self.sessions:
+            return
+
+        # told not to clean
+        stale_session = self.sessions[channel.id]
+        if stale_session['clean_after'] < 0:
+            return
+
+        # terminals
+        ids = [m.id for m in stale_session['authors'].values()]
+
+        # console
+        if stale_session['console']:
+            ids.append(stale_session['console'].id)
+
+        # msg is a wink msg
+        if message.id in ids:
+            return
+
+        # wait awhile
+        await asyncio.sleep(stale_session['clean_after'])
+
+        # check again to see if this message is still valid
+        stale_session = self.sessions.get(channel.id)
+        if not stale_session:
+            return
+
+        ids = [m.id for m in stale_session['authors'].values()]
+
+        if stale_session['console']:
+            ids.append(stale_session['console'].id)
+
+        if message.id in ids:
+            return
+
+        await try_delete(self.bot, message)
+
+    
+
+
+async def try_delete(bot, message):
+    try:
+        await bot.delete_message(message)
+    except:
+        return False
+    return True
+
 
 def line_pagify(s, lines_per_page=14, page_length=1960):
     lines = s.split('\n')
@@ -439,8 +499,6 @@ async def wait_for_reaction_remove(bot, emoji=None, *, user=None,
         return done.pop().result() and still_in and remove_event
     except:
         return None
-
-
 
 
 def setup(bot):
