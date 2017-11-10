@@ -211,8 +211,9 @@ class Wink:
 
         self.sessions[channel.id] = {
             'authors' : {},
-            'output'  : ['Welcome!!\nprint(SynthDefs) to see the instruments\n'
-                         'print(Player.Attributes()) to see their attributes!\n\n'
+            'output'  : ['Welcome!!\nThis is a collaborative window into FoxDot\n'
+                         ' print(SynthDefs) to see the instruments\n'
+                         ' print(Player.Attributes()) to see their attributes!\n\n'
                          'Single/Double letter players only. ex:\n'
                          ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
                          ' p2 >> play("(xo){[--]-}")\n'
