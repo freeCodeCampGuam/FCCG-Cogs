@@ -224,7 +224,7 @@ class Wink:
             'pages'   : [],
             'page_num': 0,
             'pager_task': None,
-            'console-less': console,
+            'console-less': not console,
             'repl'    : None,
             'active'  : True,
             'click_wait': None,
