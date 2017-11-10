@@ -146,13 +146,14 @@ class Wink:
 
     def kill(self, channel):
         self.sessions[channel.id]['repl'].kill()
-        console = self.sessions[channel.id]['console']
-        try:
-            self.sessions[channel.id]['pager_task'].cancel()
-        except:
-            print("not able to cancel {}'s pager".format(channel))
+        if not self.sessions[channel.id]['console-less']:
+            console = self.sessions[channel.id]['console']
+            try:
+                self.sessions[channel.id]['pager_task'].cancel()
+            except:
+                print("not able to cancel {}'s pager".format(channel))
+            self.bot.loop.create_task(try_delete(self.bot, console))
         self.sessions[channel.id]['active'] = False
-        self.bot.loop.create_task(try_delete(self.bot, console))
         self.sessions[channel.id]['click_wait'].cancel()
 
     async def start_console(self, ctx, session):
@@ -193,8 +194,10 @@ class Wink:
 
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
-    async def wink(self, ctx, clean: int=-1):
+    async def wink(self, ctx, console: bool=True, clean: int=-1):
         """start up a collab FoxDot session
+        set the console off if you're joining someone else's wink
+
         clean is how long to wait before deleting non-wink msgs
         if clean is negative, msgs are not deleted
         """
@@ -220,6 +223,7 @@ class Wink:
             'pages'   : [],
             'page_num': 0,
             'pager_task': None,
+            'console-less': console,
             'repl'    : None,
             'active'  : True,
             'click_wait': None,
@@ -240,9 +244,10 @@ class Wink:
         session['repl'] = FoxDotInterpreter()
         await self.bot.say('psst, head into the voice channel')
 
-        session['pager_task'] = await self.start_console(ctx, session)
+        if not session['console-less']:
+            session['pager_task'] = await self.start_console(ctx, session)
 
-        self.bot.loop.create_task(self.keep_console_updated(ctx, session))
+            self.bot.loop.create_task(self.keep_console_updated(ctx, session))
 
         while session['active']:
 
