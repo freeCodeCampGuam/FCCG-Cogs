@@ -25,13 +25,13 @@ NBS = '​'
 # x: page better
 # x: move user interpreter down
 # TODO: allow paging to go both ways
-# TODO: fix this in FoxDot   
+# x: fix this in FoxDot   
 #       File "/usr/local/lib/python3.6/site-packages/FoxDot/lib/Patterns/Generators.py", line 60, in choose
 #           return self.data[self.choice(xrange(self.MAX_SIZE))]
 #       NameError: name 'xrange' is not defined
 # x: delete queue / try_delete after wait and check if session
 #   TODO: make this a setting
-# TODO: clients / no-console mode (# of checks means how many clients connected!)
+# x: clients / no-console mode (# of checks means how many clients connected!)
 # TODO: local execute only: keyword in msg (easier) or separate button
 # TODO: set up paths to work w/ FoxDot (and Troop if needed) in REQUIREMENTS
 
