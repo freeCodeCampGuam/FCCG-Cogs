@@ -83,9 +83,9 @@ class Wink:
         channel = ctx.message.channel
         try:
             if seconds is None:
-                seconds = self.session[channel.id]['clean_after']
+                seconds = self.sessions[channel.id]['clean_after']
                 seconds = -1 if seconds > 0 else 25
-            self.session[channel.id]['clean_after'] = seconds
+            self.sessions[channel.id]['clean_after'] = seconds
         except KeyError:
             return await self.bot.say('There is no wink session in this channel')
         if seconds == -1:
