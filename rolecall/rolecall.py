@@ -156,10 +156,8 @@ class RoleCall:
 
         channel = channel or role_name.lower()
 
-        role_name = self.get_or_create("role", role_name, server)
-            
-        await self.bot.say(role_name)
-        
+        role_name = await self.get_or_create("role", role_name, server)
+
         """
         description = ("called **#{}** that only people with the {} role "
                        "can access?".format(channel, role_name.mention))
@@ -218,6 +216,7 @@ class RoleCall:
 
     async def get_or_create(self, object_type: str, role_name: str, server):
         if object_type == "role".lower():
+            await self.bot.say('testing')
             for r in server.roles:
                 if role_name == r.name:
                     return role_name
