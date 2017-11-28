@@ -36,7 +36,8 @@ async def post_role(self, role: discord.Role, channel: discord.Channel,
 def get_channel_by_name(server, name):
     channels = [c for c in server.channels if c.name==name]
     if len(channels) > 1:
-        raise MultipleThingsWithThatName("There are multiple channels "
+        raise 
+        leThingsWithThatName("There are multiple channels "
                                            "with the name: " + name)
     if len(channels) == 0:
         raise NothingWithThatName("There is no channel "
@@ -148,7 +149,7 @@ class RoleCall:
             else:
                 rb_channel = get_channel_by_name(server, settings["ROLEBOARD"])
             await self.bot.say('Ok. Roleboard is still {}'
-                               .format(rb_channel and rb_channel.mention))
+                               .format(rb_channel and rb_channel.   mention))
             return
 
         settings["ROLEBOARD"] = channel and channel.name
@@ -156,8 +157,9 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str,
-                            content_or_messsage_id: str):
+    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str, roleboard: discord.Channel=None, channel: discord.Channel=None
+                            ):
+
         """Add an entry to the roleboard."""
         server = ctx.message.server
         # channel = ctx.message.channel
@@ -165,14 +167,16 @@ class RoleCall:
 
         channel = channel or role_name.lower()
 
-        role_name = self.get_or_create("role", role_name)
+        role_name = await self.get_or_create("role", role_name, server)
 
+        """
         description = ("called **#{}** that only people with the {} role "
                        "can access?".format(channel, role_name.mention))
         embed = discord.Embed(title="Create a Channel?",
                               description=description)
         embed.set_footer(text="*or type a different channel name or the name of an existing channel to link that channel instead.")
         await self.prompt(ctx, embed=embed)
+        """
 
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
@@ -204,6 +208,31 @@ class RoleCall:
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
 
+    def _get_object_by_name(self, otype, server, name, ignore_case=True):
+        """returns object of specified type from server of specified name
+        otype is discord.Role or discord.Channel
+        """
+        types = {
+            discord.Role: 'roles',
+            discord.Channel: 'channels'
+        }
+        li = getattr(server, types[otype])
+        if ignore_case:
+            match = [i for i in li if i.name.lower() == name.lower()]
+        else:
+            match = [i for i in li if i.name == name]
+        if len(match) > 1:
+            raise Exception("More than one {} found".format(types[otype][:-1]))
+        return match[0]
+
+    async def get_or_create(self, object_type: str, role_name: str, server):
+        if object_type == "role":
+            await self.bot.say('testing')
+            for r in server.roles:
+                if role_name == r.name:
+                    return role_name
+            role = await self.bot.create_role(server, name=role_name)
+            return role.name
 
 async def wait_for_first_response(tasks, converters):
     """given a list of unawaited tasks and non-coro result parsers to be called on the results,

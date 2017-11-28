@@ -1,0 +1,15 @@
+- Channel = Roleboard
+- ENTRY
+	- role (if role doesnt exist, create a new one)
+	- message
+	- roleboard (if channel does not exist, create a new one. If not specified, use channel in previous invokation)
+	- reaction
+	- channel (if left blank, new channel is created with same name as role name: if channel exists, associate entry with the channel)
+
+- Additional Feature
+	- option channel-less entry could  be created 
+
+- Roleboard Info command
+	- List of roleboard channels
+	- list of roles for each channel
+	- number of people in each role
