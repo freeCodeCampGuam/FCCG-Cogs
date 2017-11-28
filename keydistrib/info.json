@@ -1,5 +1,5 @@
 {
-    "AUTHOR" : "irdumb", "gmcaguilar"
+    "AUTHOR" : "irdumb, gmcaguilar",
     "INSTALL_MSG" : "Time to make it rain....keys!",
     "NAME" : "keydistrib",
     "SHORT" : "Distribute keys with simple commands",
