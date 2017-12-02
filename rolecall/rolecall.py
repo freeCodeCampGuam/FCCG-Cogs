@@ -227,14 +227,16 @@ class RoleCall:
 
     async def get_or_create(self, object_type: str, role_name: str, server):
         if object_type == "role":
-            await self.bot.say('testing')
             role = discord.utils.get(server.roles, name=role_name)
             try:
                 if role.name == role_name: 
                     return role 
             except: 
-                role = await self.bot.create_role(server, name=role_name)
-                return role.name  
+                try:
+                    role = await self.bot.create_role(server, name=role_name)
+                    return role.name  
+                except:
+                    await self.bot.say("You have no right to label people!!")
 
 async def wait_for_first_response(tasks, converters):
     """given a list of unawaited tasks and non-coro result parsers to be called on the results,
