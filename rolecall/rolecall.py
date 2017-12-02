@@ -133,6 +133,7 @@ class RoleCall:
         #channel = ctx.message.channel
         author = ctx.message.author
 
+
         """
         TODO: limit amount of messages. when over,
             log warning and DM server owner /
@@ -228,14 +229,14 @@ class RoleCall:
     async def get_or_create(self, object_type: str, role_name: str, server):
         if object_type == "role":
             role = discord.utils.get(server.roles, name=role_name)
-            try:
-                if role.name == role_name: 
+            try:                                # try in case role = None
+                if role.name == role_name:     
                     return role 
-            except: 
-                try:
+            except:                             # if it is None, create new role
+                try:                            # try in case permission is needed
                     role = await self.bot.create_role(server, name=role_name)
                     return role.name  
-                except:
+                except:                         
                     await self.bot.say("You have no right to label people!!")
 
 async def wait_for_first_response(tasks, converters):
