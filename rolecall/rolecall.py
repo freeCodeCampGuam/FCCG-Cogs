@@ -225,6 +225,7 @@ class RoleCall:
         return match[0]
 
     async def get_or_create(self, object_type: str, object_name: str, server):
+        """ returns object if it exists, otherwise create the object """
         err_msg = "You have no right to label people!!"
         if object_type == "role":               # for roles
             role = discord.utils.get(server.roles, name=object_name)
