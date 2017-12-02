@@ -158,17 +158,15 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str, roleboard: discord.Channel=None, channel: discord.Channel=None
+    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str, roleboard: str, channel: discord.Channel=None
                             ):
-
         """Add an entry to the roleboard."""
         server = ctx.message.server
-        # channel = ctx.message.channel
         author = ctx.message.author
-
         channel = channel or role_name.lower()
 
         role_name = await self.get_or_create("role", role_name, server)
+        roleboard = await self.get_or_create("channel", roleboard, server)
 
         """
         description = ("called **#{}** that only people with the {} role "
@@ -226,18 +224,32 @@ class RoleCall:
             raise Exception("More than one {} found".format(types[otype][:-1]))
         return match[0]
 
-    async def get_or_create(self, object_type: str, role_name: str, server):
-        if object_type == "role":
-            role = discord.utils.get(server.roles, name=role_name)
+    async def get_or_create(self, object_type: str, object_name: str, server):
+        err_msg = "You have no right to label people!!"
+        if object_type == "role":               # for roles
+            role = discord.utils.get(server.roles, name=object_name)
             try:                                # try in case role = None
-                if role.name == role_name:     
-                    return role 
+                if role.name == object_name:     
+                    return role.name 
             except:                             # if it is None, create new role
                 try:                            # try in case permission is needed
-                    role = await self.bot.create_role(server, name=role_name)
+                    role = await self.bot.create_role(server, name=object_name)
                     return role.name  
                 except:                         
-                    await self.bot.say("You have no right to label people!!")
+                    await self.bot.say(err_msg)
+
+        elif object_type == "channel":          # for channels
+            channel = discord.utils.get(server.channels, name=object_name)
+            try: 
+                if channel.name == object_name:
+                    return channel.name
+            except:
+                try:
+                    channel = await self.bot.create_channel(server, object_name)
+                    return channel.name 
+                except:
+                    await self.bot.say(err_msg)
+
 
 async def wait_for_first_response(tasks, converters):
     """given a list of unawaited tasks and non-coro result parsers to be called on the results,
