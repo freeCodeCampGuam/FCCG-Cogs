@@ -404,6 +404,10 @@ class Wink:
         if message.id in ids:
             return
 
+        # don't delete these
+        if message.content.startswith('*'):
+            return
+
         # wait awhile
         await asyncio.sleep(stale_session['clean_after'])
 
@@ -418,6 +422,9 @@ class Wink:
             ids.append(stale_session['console'].id)
 
         if message.id in ids:
+            return
+
+        if message.content.startswith('*'):
             return
 
         await try_delete(self.bot, message)
