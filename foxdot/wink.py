@@ -287,6 +287,7 @@ class Wink:
             fmt = None
             stdout = io.StringIO()
             try:
+                # foxdot must have turned off output to stdout recently
                 with redirect_stdout(stdout):
                     result = session['repl'].evaluate(cleaned)
             except Exception as e:
@@ -303,6 +304,11 @@ class Wink:
                     fmt = '{}{}'.format(value, result)
                 elif value:
                     fmt = '{}'.format(value)
+                else:
+                    clean_lines = cleaned.split('\n')
+                    with_author = ['{}: {}'.format(winker.display_name, ln) 
+                                   for ln in clean_lines]
+                    fmt = '\n'.join(with_author)
             if fmt is None:
                 continue
 
