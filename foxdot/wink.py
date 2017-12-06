@@ -356,7 +356,7 @@ class Wink:
         def check(m):
             ps = tuple(self.settings["REPL_PREFIX"])
             return m.content.startswith(ps)
-        answer = await self.bot.wait_for_message(timeout=30, author=member,
+        answer = await self.bot.wait_for_message(timeout=60*5, author=member,
                                                  check=check, channel=channel)
         if answer:
             await self.bot.add_reaction(answer, '☑')
