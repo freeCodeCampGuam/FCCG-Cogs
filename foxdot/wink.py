@@ -13,7 +13,7 @@ from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 
 sys.path.insert(0, 'PATH_TO_TROOP')
-from src.interpreter import FoxDotInterpreter
+from src.interpreter import FoxDotInterpreter, StackTidalInterpreter
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
@@ -198,7 +198,7 @@ class Wink:
 
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
-    async def wink(self, ctx, console: bool=True, clean: int=-1):
+    async def wink(self, ctx, kind: str='FoxDot', console: bool=True, clean: int=-1):
         """start up a collab FoxDot session
         set the console off if you're joining someone else's wink
 
@@ -210,6 +210,15 @@ class Wink:
         channel = ctx.message.channel
         author = ctx.message.author
         server = ctx.message.server
+
+        kind = kind.lower()
+        interpreters = {'foxdot': FoxDotInterpreter,
+                        'tidal': StackTidalInterpreter}
+        try:
+            Interpreter = interpreters[kind]
+        except KeyError:
+            await self.bot.say('Only FoxDot and Tidal interpreters available')
+            return
 
         if channel.id in self.sessions:
             await self.bot.say("Already running a wink session in this channel")
@@ -235,7 +244,8 @@ class Wink:
             'active'  : True,
             'click_wait': None,
             'update_console': False,
-            'clean_after': clean
+            'clean_after': clean,
+            'interpreter': Interpreter
         }
 
         session = self.sessions[channel.id]
@@ -248,7 +258,7 @@ class Wink:
 
         session['pages'].append(self.pager(session)())
 
-        session['repl'] = FoxDotInterpreter()
+        session['repl'] = Interpreter()
         await self.bot.say('psst, head into the voice channel')
 
         if not session['console-less']:
