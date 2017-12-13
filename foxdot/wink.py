@@ -34,6 +34,10 @@ NBS = '​'
 # x: clients / no-console mode (# of checks means how many clients connected!)
 # TODO: local execute only: keyword in msg (easier) or separate button
 # TODO: set up paths to work w/ FoxDot (and Troop if needed) in REQUIREMENTS
+# TODO: get tidal working
+# TODO: tidal intro text also
+# x: display "user: input" if no stdout / result
+# x: add a way for users to send permanent msgs if in cleanup mode
 
 
 _reaction_remove_events = set()
