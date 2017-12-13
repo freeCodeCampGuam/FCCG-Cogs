@@ -204,6 +204,8 @@ class Wink:
 
         clean is how long to wait before deleting non-wink msgs
         if clean is negative, msgs are not deleted
+
+        if cleaning is on, message starting with * aren't deleted
         """
         channel = ctx.message.channel
         author = ctx.message.author
