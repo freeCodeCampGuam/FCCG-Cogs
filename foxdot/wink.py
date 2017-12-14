@@ -144,6 +144,8 @@ class Wink:
         """info about the TidalCycles environment"""
         s = ("This is **TidalCycles** <https://tidalcycles.org/>\n"
              "We have 9 dirt connections to work with (`d1` ... `d9`)\n"
+             "You send one to through to the interpreter at a time (`stack` is your friend)\n"
+             "You should definitely go through this <https://tidalcycles.org/patterns.html>\n"
              "That's all I got :3 PR more to add here :thumbsup:")
         await self.bot.say(s)
         s = ("```haskell\n"
