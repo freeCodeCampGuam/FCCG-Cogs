@@ -108,6 +108,50 @@ class Wink:
                 content = content[len(p):]
                 return content.strip(' \n')
 
+    @commands.command(pass_context=True)
+    async def foxdot(self, ctx):
+        """info about the FoxDot environment"""
+        s = ("This is **FoxDot** <http://foxdot.org/>\n"
+             "There are some `docs` and `Tutorials` <here: https://github.com/Qirky/FoxDot>\n"
+             "Including a description of Effects <https://github.com/Qirky/FoxDot/blob/master/docs/Effects.md>\n"
+             "Basics:\n"
+             "1. All 1-2 letter variable names have been assigned `Player()` objects. We can assign instruments (SynthDefs) to them like so `p1 >> piano()`\n"
+             "2. We can give the synth notes to play in a pattern `p1 >> piano([0,2,4])` (0 is the root, 7 is an octave up)\n"
+             "3. We can add attributes (effects) `p1 >> piano([0,2,4], amp=.5, dur=4)`\n"
+             "4. Attributes can be given patterns too `p1 >> piano([0,2,4], dur=[.25,.25,1])`\n"
+             "5. `[]` in patterns alternate. `()` plays them at the same time (chord) `p1 >> piano([0, [1,-1], (2,4)], amp=[.5,1])`\n"
+             "6. the `play` synth is special. it plays samples. <https://github.com/Qirky/FoxDot#sample-player-objects> `p1 >> play('x - - [--] ')` Notice, its \"notes\" are surrounded in quotes.")
+        await self.bot.say(s)
+        s = ("```py\n"
+             "#scales | print(Scale.names())\n"
+             "Scale.default='minor'\n"
+             "Root.default.set(-1)\n"
+             "['chromatic', 'dorian', 'dorian2', 'egyptian', 'freq', 'harmonicMajor', 'harmonicMinor', 'indian', 'justMajor', 'justMinor', 'locrian', 'locrianMajor', 'lydian', 'lydianMinor', 'major', 'majorPentatonic', 'melodicMinor', 'minor', 'minorPentatonic', 'mixolydian', 'phrygian', 'prometheus', 'ryan', 'zhi']\n"
+             "\n"
+             "#instruments | print(SynthDefs)\n"
+             "p1 >> pulse([0,2,4]).stop() # p1.reset() to remove all attributes\n"
+             "dict_keys(['loop', 'play1', 'play2', 'audioin', 'pads', 'noise', 'dab', 'varsaw', 'lazer', 'growl', 'bass', 'dirt', 'crunch', 'rave', 'scatter', 'charm', 'bell', 'gong', 'soprano', 'dub', 'viola', 'scratch', 'klank', 'ambi', 'glass', 'soft', 'quin', 'pluck', 'spark', 'blip', 'ripple', 'creep', 'orient', 'zap', 'marimba', 'fuzz', 'bug', 'pulse', 'saw', 'snick', 'twang', 'karp', 'arpy', 'nylon', 'donk', 'squish', 'swell', 'razz', 'sitar', 'star', 'piano', 'sawbass', 'prophet'])\n"
+             "\n"
+             "#attributes | print(Player.Attributes())\n"
+             "p1 >> piano([0,2,4], oct=6)  # must be reset to default or use .reset() to reset all attrs\n"
+             "p1.delay = (2,4)  # patterns can be used\n"
+             "('degree', 'oct', 'freq', 'dur', 'delay', 'buf', 'blur', 'amplify', 'scale', 'bpm', 'sample', 'env', 'sus', 'fmod', 'pan', 'rate', 'amp', 'midinote', 'channel', 'vib', 'vibdepth', 'slide', 'sus', 'slidedelay', 'slidefrom', 'bend', 'benddelay', 'coarse', 'pshift', 'hpf', 'hpr', 'lpf', 'lpr', 'swell', 'bpf', 'bpr', 'bpnoise', 'bits', 'amp', 'crush', 'dist', 'chop', 'echo', 'decay', 'spin', 'cut', 'room', 'mix', 'formant', 'shape')\n"
+             "```")
+        await self.bot.say(s)
+
+    @commands.command(pass_context=True)
+    async def tidal(self, ctx):
+        """info about the TidalCycles environment"""
+        s = ("This is **TidalCycles** <https://tidalcycles.org/>\n"
+             "We have 9 dirt connections to work with (`d1` ... `d9`)\n"
+             "That's all I got :3 PR more to add here :thumbsup:")
+        await self.bot.say(s)
+        s = ("```haskell\n"
+             "-- dirt samples\n"
+             "\"808 808bd 808cy 808hc 808ht 808lc 808lt 808mc 808mt 808oh 808sd 909 ab ade ades2 ades3 ades4 alex alphabet amencutup armora arp arpy auto baa baa2 bass bass0 bass1 bass2 bass3 bassdm bassfoo battles bd bend bev bin birds birds3 bleep blip blue bottle breaks125 breaks152 breaks157 breaks165 breath bubble can casio cb cc chin chink circus clak click clubkick co control cosmicg cp cr crow d db diphone diphone2 dist dork2 dorkbot dr dr2 dr55 dr_few drum drumtraks e east electro1 erk f feel feelfx fest fire flick fm foo future gab gabba gabbaloud gabbalouder glasstap glitch glitch2 gretsch gtr h hand hardcore hardkick haw hc hh hh27 hit hmm ho hoover house ht if ifdrums incoming industrial insect invaders jazz jungbass jungle jvbass kicklinn koy kurt latibro led less lighter linnhats lt made made2 mash mash2 metal miniyeah moan monsterb moog mouth mp3 msg mt mute newnotes noise noise2 notes numbers oc odx off outdoor pad padlong pebbles perc peri pluck popkick print proc procshort psr rave rave2 ravemono realclaps reverbkick rm rs sax sd seawolf sequential sf sheffield short sid sine sitar sn space speakspell speech speechless speedupdown stab stomp subroc3d sugar sundance tabla tabla2 tablex tacscan tech techno tink tok toys trump ul ulgab uxay v voodoo wind wobble world xmas yeah\"\n"
+             "```\n")
+        await self.bot.say(s)
+
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
     async def cleanwink(self, ctx, seconds: int=None):
