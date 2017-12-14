@@ -13,10 +13,40 @@ from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 
 sys.path.insert(0, 'PATH_TO_TROOP')
-from src.interpreter import FoxDotInterpreter, StackTidalInterpreter
+from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
+
+INTERPRETERS = {
+    'foxdot': {'class': FoxDotInterpreter,
+        'intro': [
+            'Welcome!!\nThis is a collaborative window into FoxDot\n'
+            ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
+            ' p2 >> play("(xo){[--]-}")\n'
+            'execute a reset() or cls() to reposition your terminal\n'
+            'execute a . to stop all sound\n'
+            '[p]foxdot for more on FoxDot!\n'
+            'close this console to reposition it also\n' + '-' * 51 + '\n'
+        ],
+        'hush': 'Clock.clear()'
+    },
+    'tidal': {'class': TidalInterpreter,
+        'intro': [
+            'Welcome!!\nThis is a collaborative window into TidalCycles\n'
+            ' I have no idea how to use Tidal!\n'
+            ' eeeuhhhhhh tidal example\n'
+            'execute a `reset` or `cls` to reposition your terminal\n'
+            'execute a `.` to stop all sound\n'
+            '[p]tidal for more on TidalCycles!\n'
+            'close this console to reposition it also\n' + '-' * 51 + '\n'
+        ],
+        'hush': 'hush'
+    }
+}
+INTERPRETERS['stack'] = {'class': StackTidalInterpreter,
+                         'intro': INTERPRETERS['tidal']['intro'],
+                         'hush':  INTERPRETERS['tidal']['hush']}
 
 
 # TODO: rewrite that whole pager nonsense
@@ -199,7 +229,7 @@ class Wink:
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
     async def wink(self, ctx, kind: str='FoxDot', console: bool=True, clean: int=-1):
-        """start up a collab FoxDot session
+        """start up a collab LiveCoding session
         set the console off if you're joining someone else's wink
 
         clean is how long to wait before deleting non-wink msgs
@@ -212,10 +242,10 @@ class Wink:
         server = ctx.message.server
 
         kind = kind.lower()
-        interpreters = {'foxdot': FoxDotInterpreter,
-                        'tidal': StackTidalInterpreter}
         try:
-            Interpreter = interpreters[kind]
+            Interpreter = INTERPRETERS[kind]['class']
+            intro = INTERPRETERS[kind]['intro'].copy()
+            hush = INTERPRETERS[kind]['hush']
         except KeyError:
             await self.bot.say('Only FoxDot and Tidal interpreters available')
             return
@@ -226,15 +256,7 @@ class Wink:
 
         self.sessions[channel.id] = {
             'authors' : {},
-            'output'  : ['Welcome!!\nThis is a collaborative window into FoxDot\n'
-                         ' print(SynthDefs) to see the instruments\n'
-                         ' print(Player.Attributes()) to see their attributes!\n\n'
-                         'Single/Double letter players only. ex:\n'
-                         ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
-                         ' p2 >> play("(xo){[--]-}")\n'
-                         'execute a reset() or cls() to reposition your terminal\n'
-                         'execute a . to stop all sound\n'
-                         'close this console to reposition it also\n' + '-' * 51 + '\n'],
+            'output'  : intro,
             'console' : None,
             'pages'   : [],
             'page_num': 0,
@@ -245,7 +267,8 @@ class Wink:
             'click_wait': None,
             'update_console': False,
             'clean_after': clean,
-            'interpreter': Interpreter
+            'interpreter': Interpreter,
+            'hush': hush
         }
 
         session = self.sessions[channel.id]
@@ -297,7 +320,7 @@ class Wink:
                 continue
 
             if cleaned == '.':
-                cleaned = 'Clock.clear()'
+                cleaned = session['hush']
 
 
             fmt = None
