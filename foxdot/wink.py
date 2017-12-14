@@ -236,6 +236,8 @@ class Wink:
         if clean is negative, msgs are not deleted
 
         if cleaning is on, message starting with * aren't deleted
+
+        available environments: FoxDot, Tidal, Stack (stack install of Tidal)
         """
         channel = ctx.message.channel
         author = ctx.message.author
@@ -247,7 +249,8 @@ class Wink:
             intro = INTERPRETERS[kind]['intro'].copy()
             hush = INTERPRETERS[kind]['hush']
         except KeyError:
-            await self.bot.say('Only FoxDot and Tidal interpreters available')
+            await self.bot.say('Only FoxDot and Tidal interpreters available '
+                               '(use `stack` if you use stack for your Tidal)')
             return
 
         if channel.id in self.sessions:
