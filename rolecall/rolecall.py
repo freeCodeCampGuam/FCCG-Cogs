@@ -60,7 +60,6 @@ class NothingWithThatName(Exception):
 class MultipleThingsWithThatName(Exception):
     pass
 
-
 """
 Implementation notes:
 
@@ -158,7 +157,7 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str, roleboard: str, channel: discord.Channel=None
+    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Reaction, roleboard: str, channel: discord.Channel=None
                             ):
         """Add an entry to the roleboard."""
         server = ctx.message.server
