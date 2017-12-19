@@ -157,7 +157,7 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Reaction, roleboard: str, channel: discord.Channel=None
+    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Emoji, roleboard: str, channel: discord.Channel=None
                             ):
         """Add an entry to the roleboard."""
         server = ctx.message.server
@@ -239,7 +239,7 @@ class RoleCall:
                     await self.bot.say(err_msg)
 
         elif object_type == "channel":          # for channels
-            channel = discord.utils.get(server.channels, name=object_name)
+            channel = discord.utils.get(server.channels, name=object_name.lower())
             try: 
                 if channel.name == object_name:
                     return channel.name
