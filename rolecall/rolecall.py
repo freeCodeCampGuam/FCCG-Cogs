@@ -189,9 +189,8 @@ class RoleCall:
         em = discord.Embed(title='{} {}'.format(role_name, role_reaction), description=role_description, colour=0xDEADBF)
 
         message = await self.bot.send_message(role_board, embed=em)
-        await self.bot.say(message)
 
-        self.bot.add_reaction(message, role_reaction)
+        await self.bot.add_reaction(message, role_reaction)
 
 
 
