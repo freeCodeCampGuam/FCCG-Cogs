@@ -165,8 +165,14 @@ class RoleCall:
         channel = channel or role_name.lower()
 
         role_name = await self.get_or_create("role", role_name, server)
-        roleboard = await self.get_or_create("channel", roleboard, server)
 
+        channels = ctx.message.channel_mentions
+        if len(channels) == 1:
+            roleboard = await self.get_or_create("channel", channels[0].name, server)
+        else:
+            roleboard = await self.get_or_create("channel", roleboard, server)
+
+       #await self.bot.send_message()
         """
         description = ("called **#{}** that only people with the {} role "
                        "can access?".format(channel, role_name.mention))
@@ -225,30 +231,29 @@ class RoleCall:
 
     async def get_or_create(self, object_type: str, object_name: str, server):
         """ returns object if it exists, otherwise create the object """
-        err_msg = "You have no right to label people!!"
         if object_type == "role":               # for roles
             role = discord.utils.get(server.roles, name=object_name)
             try:                                # try in case role = None
-                if role.name == object_name:     
-                    return role.name 
+                if role.name == object_name:
+                    return role.name
             except:                             # if it is None, create new role
                 try:                            # try in case permission is needed
                     role = await self.bot.create_role(server, name=object_name)
                     return role.name  
-                except:                         
-                    await self.bot.say(err_msg)
+                except Exception as e:
+                    await self.bot.say(e)
 
         elif object_type == "channel":          # for channels
-            channel = discord.utils.get(server.channels, name=object_name.lower())
-            try: 
+            channel = discord.utils.get(server.channels, name=object_name)
+            try:                
                 if channel.name == object_name:
                     return channel.name
             except:
                 try:
                     channel = await self.bot.create_channel(server, object_name)
-                    return channel.name 
-                except:
-                    await self.bot.say(err_msg)
+                    return channel.name
+                except Exception as e:
+                    await self.bot.say(e)
 
 
 async def wait_for_first_response(tasks, converters):
