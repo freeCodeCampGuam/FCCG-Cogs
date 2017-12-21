@@ -1,4 +1,9 @@
 - Channel = Roleboard
+
+- User must have the capability to format an entry however he wants
+
+- It is then inserted into any roleboard/channel desired
+
 - ENTRY
 	- role (if role doesnt exist, create a new one)
 	- message
@@ -6,8 +11,10 @@
 	- reaction
 	- channel (if left blank, new channel is created with same name as role name: if channel exists, associate entry with the channel)
 
+- Take note that using on_reaction_add utilizes the message cache. Could use a get_message poll as a solution
+
 - Additional Feature
-	- option channel-less entry could  be created 
+	- option channel-less entry could be created 
 
 - Roleboard Info command
 	- List of roleboard channels
