@@ -7,9 +7,9 @@
 - ENTRY
 	- role (if role doesnt exist, create a new one)
 	- message
-	- roleboard (if channel does not exist, create a new one. If not specified, use channel in previous invokation)
+	- roleboard (if channel does not exist, ask which channel to use as the roleboard)
 	- reaction
-	- channel (if left blank, new channel is created with same name as role name: if channel exists, associate entry with the channel)
+	- channel (if left blank, new channel is created with same name as role name. if channel does not exist, create a new channel. if channel exists, associate entry with the channel)
 
 - Take note that using on_reaction_add utilizes the message cache. Could use a get_message poll as a solution
 

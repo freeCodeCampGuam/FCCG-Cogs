@@ -157,30 +157,24 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Emoji, role_board: str, channel: discord.Channel=None
+    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Emoji, role_board: discord.Channel, channel: str
                             ):
         """Add an entry to the roleboard."""
         server = ctx.message.server
         author = ctx.message.author
-        channel = channel or role_name.lower()
 
         role_name = await self.get_or_create("role", role_name, server)
 
+        # retrieve channel mentions in the command message
         channels = ctx.message.channel_mentions
-        if len(channels) == 1:
-            roleboard_channel = await self.get_or_create("channel", channels[0].name, server)
-        else:
-            roleboard_channel = await self.get_or_create("channel", role_board, server)
 
-        await self.make_entry(role_name, content_or_messsage_id, reaction, roleboard_channel)
-        """
-        description = ("called **#{}** that only people with the {} role "
-                       "can access?".format(channel, role_name.mention))
-        embed = discord.Embed(title="Create a Channel?",
-                              description=description)
-        embed.set_footer(text="*or type a different channel name or the name of an existing channel to link that channel instead.")
-        await self.prompt(ctx, embed=embed)
-        """
+        if len(channels) == 1:
+            role_channel = await self.get_or_create("channel", channel, server)
+        else:
+            role_channel = await self.get_or_create("channel", channels[1].name, server)
+
+        await self.make_entry(role_name, content_or_messsage_id, reaction, role_board)
+      
     async def make_entry(self, role_name: discord.Role,
                          role_description: str, role_reaction: discord.Emoji, role_board: discord.Channel):
         """ constructs the roleboard entry """
@@ -192,7 +186,12 @@ class RoleCall:
 
         await self.bot.add_reaction(message, role_reaction)
 
+    async def on_reaction_add(self, reaction, user):
+        message = reaction.message
 
+        message_roles = reaction.message.role_mentions
+        role = message_roles[0]
+        await self.bot.add_roles(user, role)
 
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
