@@ -12,14 +12,13 @@ log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
 DEFAULT_SETTINGS = {
-    "ROLEBOARD": None,
-    "MSGS": {}
+    "ENTRIES": {}
 }
 
 # just make a constructor. we're treating it as an object anyway
-MSG_STRUCT = {
-    "ID": None,
-    "ROLE": None
+ENTRY_STRUCT = {
+    "CHANNEL": None,
+    "ROLES": {}
 }
 
 
@@ -32,33 +31,6 @@ async def post_role(self, role: discord.Role, channel: discord.Channel,
         "AUTHOR": author.id,
         "EMOJI": None
     }
-
-def get_channel_by_name(server, name):
-    channels = [c for c in server.channels if c.name==name]
-    if len(channels) > 1:
-        raise 
-        leThingsWithThatName("There are multiple channels "
-                                           "with the name: " + name)
-    if len(channels) == 0:
-        raise NothingWithThatName("There is no channel "
-                                  "with the name: " + name)
-    return channels[0]
-
-def get_role_by_name(server, name):
-    roles = [c for c in server.roles if c.name==name]
-    if len(roles) > 1:
-        raise MultipleThingsWithThatName("There are multiple roles "
-                                         "with the name: " + name)
-    if len(roles) == 0:
-        raise NothingWithThatName("There is no role "
-                                  "with the name: " + name)
-    return roles[0]
-
-class NothingWithThatName(Exception):
-    pass
-
-class MultipleThingsWithThatName(Exception):
-    pass
 
 """
 Implementation notes:
@@ -111,6 +83,7 @@ class RoleCall:
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
+    
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
