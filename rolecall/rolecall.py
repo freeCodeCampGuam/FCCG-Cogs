@@ -303,7 +303,7 @@ def check_folders():
 
 
 def check_files():
-    default = {}
+    default = {"ENTRIES": {}}
 
     if not dataIO.is_valid_json(SETTINGS_PATH):
         print("Creating default rolecall settings.json...")
