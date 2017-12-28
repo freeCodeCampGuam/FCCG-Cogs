@@ -126,9 +126,9 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Emoji, role_board: discord.Channel, channel: str
+    async def roleboard_add(self, ctx, role_name: str, content_or_message_id: str,  reaction: discord.Emoji, role_board: discord.Channel, channel: str
                             ):
-        """Add an entry to the roleboard or post a role to an existing entry"""
+        """Add an entry to the roleboard. If a message ID is provided, post a role to the existing message/entry"""
         server = ctx.message.server
         author = ctx.message.author
 
@@ -142,7 +142,7 @@ class RoleCall:
         else:
             role_channel = self.bot.get_channel(channels[1])
         
-        await self.make_entry(role_name, content_or_messsage_id, reaction, role_board)
+        await self.make_entry(role_name, content_or_message_id, reaction, role_board)
       
     async def make_entry(self, role_name: discord.Role,
                          message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
