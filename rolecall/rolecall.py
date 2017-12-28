@@ -18,10 +18,11 @@ DEFAULT_SETTINGS = {
 # just make a constructor. we're treating it as an object anyway
 ENTRY_STRUCT = {
     "CHANNEL": None,
-    "ROLES": {}
+    "ROLES": {},
+    "AUTHOR": None
 }
 
-
+"""
 async def post_role(self, role: discord.Role, channel: discord.Channel,
                     author: discord.Member, content=None, embed=None):
     m = await self.bot.send_message(channel, content, embed=embed)
@@ -31,6 +32,7 @@ async def post_role(self, role: discord.Role, channel: discord.Channel,
         "AUTHOR": author.id,
         "EMOJI": None
     }
+"""
 
 """
 Implementation notes:
@@ -68,14 +70,6 @@ class Entry:
     def __init__(self, bot, save_point, server, channel, author):
         pass
 
-
-class RoleBoard:
-    """Server-based Roleboard"""
-
-    def __init__(self, bot, save_point, server):
-        pass
-
-
 class RoleCall:
     """Self-assign roles via reactions on a roleboard
     or via command (for mobile users)"""
@@ -83,7 +77,9 @@ class RoleCall:
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
-    
+
+    def _update_entries(self):
+        pass
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
@@ -139,7 +135,7 @@ class RoleCall:
         role_name = await self.get_or_create("role", role_name, server)
 
         # retrieve channel mentions in the command message
-        channels = ctx.message.channel_mentions
+        channels = ctx.message.raw_channel_mentions
 
         if len(channels) == 1:
             role_channel = await self.get_or_create("channel", channel, server)
@@ -149,22 +145,17 @@ class RoleCall:
         await self.make_entry(role_name, content_or_messsage_id, reaction, role_board)
       
     async def make_entry(self, role_name: discord.Role,
-                         role_description: str, role_reaction: discord.Emoji, role_board: discord.Channel):
+                         message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
         """ constructs the roleboard entry """
-        await self.bot.send_message(role_board, content="The following roles are available, assign a role to yourself by clicking the corresponding reaction.")
 
-        em = discord.Embed(title='{} {}'.format(role_name, role_reaction), description=role_description, colour=0xDEADBF)
+        entry = await self.bot.send_message(role_board, content=message)
+        em = discord.Embed(title='{} {}'.format(role_name, role_reaction), colour=0xDEADBF)
+        await self.bot.send_message(role_board, embed=em)
+        await self.bot.add_reaction(entry, role_reaction)
 
-        message = await self.bot.send_message(role_board, embed=em)
-
-        await self.bot.add_reaction(message, role_reaction)
 
     async def on_reaction_add(self, reaction, user):
-        message = reaction.message
-
-        message_roles = reaction.message.role_mentions
-        role = message_roles[0]
-        await self.bot.add_roles(user, role)
+        pass
 
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
