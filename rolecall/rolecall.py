@@ -128,7 +128,7 @@ class RoleCall:
     @roleboard.command(pass_context=True, name="add", no_pm=True)
     async def roleboard_add(self, ctx, role_name: str, content_or_messsage_id: str,  reaction: discord.Emoji, role_board: discord.Channel, channel: str
                             ):
-        """Add an entry to the roleboard."""
+        """Add an entry to the roleboard or post a role to an existing entry"""
         server = ctx.message.server
         author = ctx.message.author
 
