@@ -140,8 +140,8 @@ class RoleCall:
         if len(channels) == 1:
             role_channel = await self.get_or_create("channel", channel, server)
         else:
-            role_channel = await self.get_or_create("channel", channels[1].name, server)
-
+            role_channel = self.bot.get_channel(channels[1])
+        
         await self.make_entry(role_name, content_or_messsage_id, reaction, role_board)
       
     async def make_entry(self, role_name: discord.Role,
