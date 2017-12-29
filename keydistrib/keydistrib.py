@@ -272,9 +272,9 @@ class KeyDistrib:
         try:
             keyring["SERVERS"].remove(server.id)
             msg = "Keys from that file can no longer be distributed in this server"
-        except ValueError: p
-        keyring["SERVERS"].append(server.id)
-        msg = "Keys from that file can now be distributed in this server"
+        except ValueError:
+            keyring["SERVERS"].append(server.id)
+            msg = "Keys from that file can now be distributed in this server"
 
         self._save()
         await self.bot.reply(msg)
