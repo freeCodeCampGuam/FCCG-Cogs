@@ -22,6 +22,7 @@ ENTRY_STRUCT = {
     "AUTHOR": None
 }
 
+
 """
 async def post_role(self, role: discord.Role, channel: discord.Channel,
                     author: discord.Member, content=None, embed=None):
@@ -132,26 +133,38 @@ class RoleCall:
         server = ctx.message.server
         author = ctx.message.author
 
-        role_name = await self.get_or_create("role", role_name, server)
+        role = await self.get_or_create("role", role_name, server)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
 
+        # check if two channel arguments were provided or only one
         if len(channels) == 1:
             role_channel = await self.get_or_create("channel", channel, server)
         else:
-            role_channel = self.bot.get_channel(channels[1])
+            role_channel = self.bot.get_channel(channels[1]) 
+
+        # add role to the message content 
+        content_or_message_id += "\n"*2 + "{} {}".format(role, reaction)
         
-        await self.make_entry(role_name, content_or_message_id, reaction, role_board)
+        # check if message ID was provided. If it is, post the new role, if not, make a new entry
+        try:
+            entry = await self.bot.get_message(role_board, content_or_message_id)
+            post_role(role, reaction, entry)
+        except Exception as e:
+            await self.add_entry(role, content_or_message_id, reaction, role_board)
       
-    async def make_entry(self, role_name: discord.Role,
+    async def add_entry(self, role_name: discord.Role,
                          message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
         """ constructs the roleboard entry """
 
         entry = await self.bot.send_message(role_board, content=message)
-        em = discord.Embed(title='{} {}'.format(role_name, role_reaction), colour=0xDEADBF)
-        await self.bot.send_message(role_board, embed=em)
         await self.bot.add_reaction(entry, role_reaction)
+
+    async def post_role(self, role: discord.Role, reaction: discord.Emoji, entry: discord.Message):
+        """ add role to chosen entry """
+
+
 
 
     async def on_reaction_add(self, reaction, user):
@@ -211,7 +224,7 @@ class RoleCall:
             try:                                # try in case role = None
                 if role.name == object_name:
                     return role
-            except:                             # if it is None, create new role
+            except Exception as e:              # if it is None, create new role
                 try:                            # try in case permission is needed
                     role = await self.bot.create_role(server, name=object_name)
                     return role  
@@ -223,7 +236,7 @@ class RoleCall:
             try:                
                 if channel.name == object_name:
                     return channel
-            except:
+            except Exception as e:
                 try:
                     channel = await self.bot.create_channel(server, object_name)
                     return channel
