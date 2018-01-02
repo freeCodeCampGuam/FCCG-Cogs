@@ -134,28 +134,28 @@ class RoleCall:
         author = ctx.message.author
 
         role = await self.get_or_create("role", role_name, server)
+        await self.bot.say(role)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
+
+        # add role to the message content 
+        content_or_message_id += "\n"*2 + "{} {}".format(role.name, reaction)
 
         # check if two channel arguments were provided or only one
         if len(channels) == 1:
             role_channel = await self.get_or_create("channel", channel, server)
         else:
             role_channel = self.bot.get_channel(channels[1]) 
-
-        # add role to the message content 
-        content_or_message_id += "\n"*2 + "{} {}".format(role, reaction)
         
         # check if message ID was provided. If it is, post the new role, if not, make a new entry
         try:
             entry = await self.bot.get_message(role_board, content_or_message_id)
-            post_role(role, reaction, entry)
+            await self.post_role(role, reaction, entry)
         except Exception as e:
-            await self.add_entry(role, content_or_message_id, reaction, role_board)
+            await self.add_entry(content_or_message_id, reaction, role_board)
       
-    async def add_entry(self, role_name: discord.Role,
-                         message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
+    async def add_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
         """ constructs the roleboard entry """
 
         entry = await self.bot.send_message(role_board, content=message)
@@ -164,8 +164,9 @@ class RoleCall:
     async def post_role(self, role: discord.Role, reaction: discord.Emoji, entry: discord.Message):
         """ add role to chosen entry """
 
-
-
+        modified_entry = entry.content + "\n {} {}".format(role, reaction)
+        await self.bot.edit_message(entry, new_content=modified_entry)
+        await self.bot.add_reaction(entry, reaction)
 
     async def on_reaction_add(self, reaction, user):
         pass
