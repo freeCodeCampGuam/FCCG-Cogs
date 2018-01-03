@@ -146,8 +146,7 @@ class RoleCall:
         
         # check if message ID was provided. If it is, post the new role, if not, make a new entry
         try:
-            entry = await self.bot.get_message(role_board, content_or_message_id)
-            await self.post_role(role, reaction, entry)
+            await self.post_role(role_board, reaction, content_or_message_id)
         except Exception as e:
             await self.add_entry(content_or_message_id, reaction, role_board)
       
@@ -157,10 +156,11 @@ class RoleCall:
         entry = await self.bot.send_message(role_board, content=message)
         await self.bot.add_reaction(entry, role_reaction)
 
-    async def post_role(self, role: discord.Role, reaction: discord.Emoji, entry: discord.Message):
+    async def post_role(self, role_board: discord.Channel, role_reaction: discord.Emoji, entry_id: str):
         """ add role to chosen entry """
 
-        await self.bot.add_reaction(entry, reaction)
+        entry = await self.bot.get_message(role_board, entry_id)
+        await self.bot.add_reaction(entry, role_reaction)
 
     async def on_reaction_add(self, reaction, user):
         pass
