@@ -139,9 +139,6 @@ class RoleCall:
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
 
-        # add role to the message content 
-        content_or_message_id += "\n"*2 + "{} {}".format(role.name, reaction)
-
         # check if two channel arguments were provided or only one
         if len(channels) == 1:
             role_channel = await self.get_or_create("channel", channel, server)
