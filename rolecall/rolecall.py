@@ -134,7 +134,6 @@ class RoleCall:
         author = ctx.message.author
 
         role = await self.get_or_create("role", role_name, server)
-        await self.bot.say(role)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
@@ -161,8 +160,6 @@ class RoleCall:
     async def post_role(self, role: discord.Role, reaction: discord.Emoji, entry: discord.Message):
         """ add role to chosen entry """
 
-        modified_entry = entry.content + "\n {} {}".format(role, reaction)
-        await self.bot.edit_message(entry, new_content=modified_entry)
         await self.bot.add_reaction(entry, reaction)
 
     async def on_reaction_add(self, reaction, user):
