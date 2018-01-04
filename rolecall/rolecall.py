@@ -148,16 +148,16 @@ class RoleCall:
         try:
             await self.post_role(role_board, reaction, content_or_message_id)
         except Exception as e:
-            await self.add_entry(content_or_message_id, reaction, role_board)
+            await self.post_entry(content_or_message_id, reaction, role_board)
       
-    async def add_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
-        """ add entry to chosen roleboard """
+    async def post_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
+        """ post entry to chosen roleboard(channel) """
 
         entry = await self.bot.send_message(role_board, content=message)
         await self.bot.add_reaction(entry, role_reaction)
 
     async def post_role(self, role_board: discord.Channel, role_reaction: discord.Emoji, entry_id: str):
-        """ add role to chosen entry """
+        """ post role to chosen entry(message) """
 
         entry = await self.bot.get_message(role_board, entry_id)
         await self.bot.add_reaction(entry, role_reaction)
