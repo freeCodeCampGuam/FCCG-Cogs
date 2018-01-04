@@ -11,29 +11,13 @@ from copy import deepcopy
 log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
-DEFAULT_SETTINGS = {
-    "ENTRIES": {}
-}
+DEFAULT_SETTINGS = {}
 
 # just make a constructor. we're treating it as an object anyway
-ENTRY_STRUCT = {
-    "CHANNEL": None,
-    "ROLES": {},
-    "AUTHOR": None
+ROLEBOARD_STRUCT = {
+    "MESSAGE": None,
+    "ROLES": {}
 }
-
-
-"""
-async def post_role(self, role: discord.Role, channel: discord.Channel,
-                    author: discord.Member, content=None, embed=None):
-    m = await self.bot.send_message(channel, content, embed=embed)
-    post = {
-        "ID": m.id,
-        "ROLE": role,
-        "AUTHOR": author.id,
-        "EMOJI": None
-    }
-"""
 
 """
 Implementation notes:
@@ -79,8 +63,14 @@ class RoleCall:
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
 
-    def _record_entry(self, ):
-        pass
+    def _record_entry(self, msg_id: str, channel_id: str, role):
+        """ record entry to settings file """
+
+        settings = self.settings
+        settings['ENTRIES'][msg_id] = ENTRY_STRUCT
+        keyring = settings['ENTRIES']['msg_id']
+        keyring['CHANNEL'] = channel_id
+        keyring['ROLES']
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
@@ -275,21 +265,19 @@ def check_folders():
 
 
 def check_files():
-    default = {"ENTRIES": {}}
-
     if not dataIO.is_valid_json(SETTINGS_PATH):
         print("Creating default rolecall settings.json...")
-        dataIO.save_json(SETTINGS_PATH, default)
+        dataIO.save_json(SETTINGS_PATH, DEFAULT_SETTINGS)
     else:  # consistency check
         current = dataIO.load_json(SETTINGS_PATH)
-        inconsistancy = False
+        inconsistency = False
         if current.keys() != DEFAULT_SETTINGS.keys():
             for key in DEFAULT_SETTINGS.keys():
                 if key not in current.keys():
                     current[key] = DEFAULT_SETTINGS[key]
                     print(
                         "Adding " + str(key) + " field to rolecall settings.json")
-                    inconsistancy = True
+                    inconsistency = True
         if inconsistancy:
             dataIO.save_json(SETTINGS_PATH, current)
 
