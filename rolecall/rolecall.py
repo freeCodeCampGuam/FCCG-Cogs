@@ -59,6 +59,7 @@ class Entry:
         self.role = role
         self.emoji = emoji
         self.author = author
+        self._save()
 
 class RoleCall:
     """Self-assign roles via reactions on a roleboard
