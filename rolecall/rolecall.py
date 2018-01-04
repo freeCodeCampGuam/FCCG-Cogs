@@ -52,8 +52,12 @@ TODO: Make Entry/Call a class that handles the data for me (what is an entry on 
 class Entry:
     """Entry on the roleboard"""
 
-    def __init__(self, bot, save_point, server, channel, author):
-        pass
+    def __init__(self, bot, server: discord.Server, channel: discord.Channel, message: discord.Message, role: discord.Role, author: discord.Member):
+        self.server = server
+        self.channel = channel
+        self.message = message
+        self.role = role
+        self.author = author
 
 class RoleCall:
     """Self-assign roles via reactions on a roleboard
