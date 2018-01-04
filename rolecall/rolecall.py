@@ -144,7 +144,7 @@ class RoleCall:
         else:
             role_channel = self.bot.get_channel(channels[1]) 
         
-        # check if message ID was provided. If it is, post the new role, if not, make a new entry
+        # check if message ID was provided. If yes, post the new role to the message associated with the ID, if not, post the new entry to the chosen role board
         try:
             await self.post_role(role_board, reaction, content_or_message_id)
         except Exception as e:
