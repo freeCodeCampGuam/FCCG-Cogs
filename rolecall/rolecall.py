@@ -283,14 +283,13 @@ def check_files():
     else:  # consistency check
         current = dataIO.load_json(SETTINGS_PATH)
         inconsistancy = False
-        for server in current.values():
-            if server.keys() != DEFAULT_SETTINGS.keys():
-                for key in DEFAULT_SETTINGS.keys():
-                    if key not in server.keys():
-                        server[key] = DEFAULT_SETTINGS[key]
-                        print(
-                            "Adding " + str(key) + " field to rolecall settings.json")
-                        inconsistancy = True
+        if current.keys() != DEFAULT_SETTINGS.keys():
+            for key in DEFAULT_SETTINGS.keys():
+                if key not in current.keys():
+                    current[key] = DEFAULT_SETTINGS[key]
+                    print(
+                        "Adding " + str(key) + " field to rolecall settings.json")
+                    inconsistancy = True
         if inconsistancy:
             dataIO.save_json(SETTINGS_PATH, current)
 
