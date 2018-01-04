@@ -79,7 +79,7 @@ class RoleCall:
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
 
-    def _update_entries(self):
+    def _record_entry(self, ):
         pass
 
     @commands.group(pass_context=True, no_pm=True)
