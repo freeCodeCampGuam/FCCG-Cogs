@@ -52,11 +52,12 @@ TODO: Make Entry/Call a class that handles the data for me (what is an entry on 
 class Entry:
     """Entry on the roleboard"""
 
-    def __init__(self, bot, server: discord.Server, channel: discord.Channel, message: discord.Message, role: discord.Role, author: discord.Member):
+    def __init__(self, bot, server: discord.Server, channel: discord.Channel, message: discord.Message, role: discord.Role, emoji: discord.Emoji, author: discord.Member):
         self.server = server
         self.channel = channel
         self.message = message
         self.role = role
+        self.emoji = emoji
         self.author = author
 
 class RoleCall:
@@ -67,14 +68,15 @@ class RoleCall:
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
 
-    def _record_entry(self, msg_id: str, channel_id: str, role):
+    def _record_entry(self, entry: Entry):
         """ record entry to settings file """
 
         settings = self.settings
-        settings['ENTRIES'][msg_id] = ENTRY_STRUCT
-        keyring = settings['ENTRIES']['msg_id']
-        keyring['CHANNEL'] = channel_id
-        keyring['ROLES']
+        settings[entry.server.id] = {}
+        settings[entry.server.id][entry.channel.id] = ROLEBOARD_STRUCT
+        keyring = settings[entry.server.id][entry.channel.id]
+        keyring['MESSAGE'] = entry.message.id
+        keyring['ROLES'] = {entry.role.id: entry.emoji.id}
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
@@ -140,21 +142,27 @@ class RoleCall:
         
         # check if message ID was provided. If yes, post the new role to the message associated with the ID, if not, post the new entry to the chosen role board
         try:
-            await self.post_role(role_board, reaction, content_or_message_id)
+            msg = await self.post_role(role_board, reaction, content_or_message_id)
         except Exception as e:
-            await self.post_entry(content_or_message_id, reaction, role_board)
+            msg = await self.post_entry(content_or_message_id, reaction, role_board)
+
+        # make Entry object
+        entry = Entry(server, role_board, msg, role, reaction, author)
+
       
     async def post_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
         """ post entry to chosen roleboard(channel) """
 
-        entry = await self.bot.send_message(role_board, content=message)
-        await self.bot.add_reaction(entry, role_reaction)
+        msg = await self.bot.send_message(role_board, content=message)
+        await self.bot.add_reaction(msg, role_reaction)
+        return msg
 
     async def post_role(self, role_board: discord.Channel, role_reaction: discord.Emoji, entry_id: str):
         """ post role to chosen entry(message) """
 
-        entry = await self.bot.get_message(role_board, entry_id)
-        await self.bot.add_reaction(entry, role_reaction)
+        msg = await self.bot.get_message(role_board, entry_id)
+        await self.bot.add_reaction(msg, role_reaction)
+        return msg
 
     async def on_reaction_add(self, reaction, user):
         pass
