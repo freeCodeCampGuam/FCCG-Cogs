@@ -59,7 +59,6 @@ class Entry:
         self.role = role
         self.emoji = emoji
         self.author = author
-        self._save()
 
 class RoleCall:
     """Self-assign roles via reactions on a roleboard
@@ -78,6 +77,7 @@ class RoleCall:
         keyring = settings[entry.server.id][entry.channel.id]
         keyring['MESSAGE'] = entry.message.id
         keyring['ROLES'] = {entry.role.id: entry.emoji.id}
+        self._save()
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
@@ -149,6 +149,9 @@ class RoleCall:
 
         # make Entry object
         entry = Entry(server, role_board, msg, role, reaction, author)
+
+        # record the entry
+        self._record_entry(entry)
 
       
     async def post_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
