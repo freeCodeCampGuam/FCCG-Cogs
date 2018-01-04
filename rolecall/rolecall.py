@@ -151,7 +151,7 @@ class RoleCall:
             await self.add_entry(content_or_message_id, reaction, role_board)
       
     async def add_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
-        """ constructs the roleboard entry """
+        """ posts the roleboard entry """
 
         entry = await self.bot.send_message(role_board, content=message)
         await self.bot.add_reaction(entry, role_reaction)
