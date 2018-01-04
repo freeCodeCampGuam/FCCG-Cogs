@@ -294,7 +294,7 @@ def check_files():
                     print(
                         "Adding " + str(key) + " field to rolecall settings.json")
                     inconsistency = True
-        if inconsistancy:
+        if inconsistency:
             dataIO.save_json(SETTINGS_PATH, current)
 
 
