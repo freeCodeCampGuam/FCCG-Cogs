@@ -50,13 +50,13 @@ TODO: Make Entry/Call a class that handles the data for me (what is an entry on 
 class Entry:
     """Entry on the roleboard"""
 
-    def __init__(self, server: discord.Server, channel: discord.Channel, message: discord.Message, role: discord.Role, emoji: discord.Emoji, author: discord.Member):
+    def __init__(self, server: discord.Server, channel: discord.Channel, message: discord.Message, author: discord.Member, role: discord.Role=None, emoji: discord.Emoji=None):
         self.server = server
         self.channel = channel
         self.message = message
-        self.role = role
-        self.emoji = emoji
         self.author = author
+        self.role = role or None
+        self.emoji = emoji or None
 
 class RoleCall:
     """Self-assign roles via reactions on a roleboard
@@ -128,7 +128,7 @@ class RoleCall:
         server = ctx.message.server
         author = ctx.message.author
 
-        role = await self.get_or_create("role", role_name, server)
+        role_obj = await self.get_or_create("role", role_name, server)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
@@ -146,7 +146,7 @@ class RoleCall:
             msg = await self.post_entry(content_or_message_id, reaction, role_board)
 
         # make Entry object
-        entry = Entry(server, role_board, msg, role, reaction, author)
+        entry = Entry(server, role_board, msg, author, role=role_obj, emoji=reaction)
 
         # record the entry
         self._record_entry(entry)
