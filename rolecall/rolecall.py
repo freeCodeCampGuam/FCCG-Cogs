@@ -7,17 +7,15 @@ import asyncio
 import logging
 import os
 from copy import deepcopy
+import json
 
 log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
-DEFAULT_SETTINGS = {"SERVERS": {}}
+DEFAULT_SETTINGS = {}
 DEFAULT_SUB_SETTINGS = {"CHANNELS": {}}
 
-ROLEBOARD_STRUCT = {
-    "MESSAGE": None,
-    "ROLES": {}
-}
+ROLEBOARD_STRUCT = {"ENTRIES": {}}
 
 """
 Implementation notes:
@@ -72,22 +70,22 @@ class RoleCall:
         """ record entry to settings file """
 
         settings = self.settings
-        keyring = settings["SERVERS"][entry.server.id]["CHANNELS"]
+        emoji_to_role = {entry.emoji.id: entry.role.id}
+
+        keyring = settings[entry.server.id]["CHANNELS"]
         keyring[entry.channel.id] = ROLEBOARD_STRUCT
-        keyring[entry.channel.id]['MESSAGE'] = entry.message.id
-        keyring[entry.channel.id]['ROLES'] = {entry.emoji.id: entry.role.id}
+        keyring[entry.channel.id]['ENTRIES'][entry.message.id] = emoji_to_role
         self._save()
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
         """change roleboard settings"""
         server = ctx.message.server
-        settings = self.settings["SERVERS"]
 
         if ctx.invoked_subcommand is None:
             await self.bot.send_cmd_help(ctx)
         else:
-            settings.setdefault(server.id, deepcopy(DEFAULT_SUB_SETTINGS))
+            self.settings.setdefault(server.id, deepcopy(DEFAULT_SUB_SETTINGS))
 
     @roleboard.command(pass_context=True, name="channel", no_pm=True)
     async def roleboard_channel(self, ctx, channel: discord.Channel=None):
@@ -167,9 +165,6 @@ class RoleCall:
         msg = await self.bot.get_message(role_board, entry_id)
         await self.bot.add_reaction(msg, role_reaction)
         return msg
-
-    async def on_reaction_add(self, reaction, user):
-        pass
 
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
