@@ -93,6 +93,16 @@ class RoleCall:
         else:
             return False
 
+    def _get_role_from_entry(self, entry: Entry):
+        """ Accesses board entry and retrieves role that corresponds 
+        to the emoji given """
+
+        settings = self.settings
+        keyring = settings[entry.server.id][entry.channel.id][entry.message.id]
+        role_name = keyring[entry.emoji.name]['ROLE_NAME']
+        role = self.get_or_create('role', role_name, entry.server)
+        return role
+
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
         """change roleboard settings"""
