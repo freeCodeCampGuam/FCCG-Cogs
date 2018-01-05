@@ -11,12 +11,12 @@ from copy import deepcopy
 log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
-DEFAULT_SETTINGS = {}
+DEFAULT_SETTINGS = {"SERVERS": {}}
+DEFAULT_SUB_SETTINGS = {"CHANNELS": {}}
 
-# just make a constructor. we're treating it as an object anyway
 ROLEBOARD_STRUCT = {
     "MESSAGE": None,
-    "ROLES": {}
+    "EMOJI:ROLE": {}
 }
 
 """
@@ -52,7 +52,7 @@ TODO: Make Entry/Call a class that handles the data for me (what is an entry on 
 class Entry:
     """Entry on the roleboard"""
 
-    def __init__(self, bot, server: discord.Server, channel: discord.Channel, message: discord.Message, role: discord.Role, emoji: discord.Emoji, author: discord.Member):
+    def __init__(self, server: discord.Server, channel: discord.Channel, message: discord.Message, role: discord.Role, emoji: discord.Emoji, author: discord.Member):
         self.server = server
         self.channel = channel
         self.message = message
@@ -72,22 +72,26 @@ class RoleCall:
         """ record entry to settings file """
 
         settings = self.settings
-        settings[entry.server.id] = {}
-        settings[entry.server.id][entry.channel.id] = ROLEBOARD_STRUCT
-        keyring = settings[entry.server.id][entry.channel.id]
+        settings["SERVERS"] = {}
+        settings["SERVERS"][entry.server.id] = {}
+        settings["SERVERS"][entry.server.id]["CHANNELS"] = {}
+        settings["SERVERS"][entry.server.id]["CHANNELS"][entry.channel.id] = {}
+        keyring = settings["SERVERS"][entry.server.id]["CHANNELS"][entry.channel.id]
+        keyring = ROLEBOARD_STRUCT
         keyring['MESSAGE'] = entry.message.id
-        keyring['ROLES'] = {entry.role.id: entry.emoji.id}
+        keyring['ROLES'] = {entry.emoji.id: entry.role.id}
         self._save()
 
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
         """change roleboard settings"""
         server = ctx.message.server
+        settings = self.settings["SERVERS"]
 
         if ctx.invoked_subcommand is None:
             await self.bot.send_cmd_help(ctx)
         else:
-            self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
+            settings.setdefault(server.id, deepcopy(DEFAULT_SUB_SETTINGS))
 
     @roleboard.command(pass_context=True, name="channel", no_pm=True)
     async def roleboard_channel(self, ctx, channel: discord.Channel=None):
