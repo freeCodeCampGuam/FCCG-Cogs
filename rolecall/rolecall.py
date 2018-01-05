@@ -218,9 +218,19 @@ class RoleCall:
 
         dict_msg = json.loads(msg)
         if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
-            channel = self.bot.get_channel(dict_msg['channel_id'])
             server = channel.server
+            channel = self.bot.get_channel(dict_msg['channel_id'])
+            message = self.bot.get_message(channel, dict_msg['message_id'])
+            author = message.author
+            emoji_id = dict_msg['emoji']['id']
+            reaction = discord.utils.get(server.emojis, id=emoji_id)
 
+            # make Entry object to handle data
+            entry = Entry(server, channel, message, author, emoji=reaction)
+
+            # check if Entry exists in settings file
+            if _check_entry(entry):
+                _get_role
 
 
     def _save(self):
