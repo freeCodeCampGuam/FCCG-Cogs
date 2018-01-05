@@ -16,6 +16,7 @@ DEFAULT_SETTINGS = {}
 
 ENTRY_STRUCT = {
     "ROLE_ID": None,
+    "ROLE_NAME": None,
     "EMOJI_ID": None
     }
 
