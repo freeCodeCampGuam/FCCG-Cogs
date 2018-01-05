@@ -71,10 +71,10 @@ class RoleCall:
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
-        settings = self.settings
-        settings[entry.server.id][entry.channel.id] = {}
-        settings[entry.server.id][entry.channel.id][entry.message.id] = {}
-        keyring = settings[entry.server.id][entry.channel.id][entry.message.id]
+        server = self.settings[entry.server.id]
+        server.setdefault(entry.channel.id, DEFAULT_SETTINGS)
+        server[entry.channel.id].setdefault(entry.message.id, DEFAULT_SETTINGS)
+        keyring = server[entry.channel.id][entry.message.id]
         keyring[entry.emoji.name] = ROLE_RECORD_STRUCT
         keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
         keyring[entry.emoji.name]['ROLE_ID'] = entry.role.id
@@ -246,7 +246,10 @@ class RoleCall:
             if self._check_entry(entry):
                 role = await self._get_role_from_entry(entry)
                 reactor = entry.server.get_member(dict_msg['d']['user_id'])
-                await self.bot.add_roles(reactor, role)
+
+                # assign role if client is not a bot
+                if not reactor.bot:
+                    await self.bot.add_roles(reactor, role)
 
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
