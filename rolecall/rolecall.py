@@ -16,7 +16,7 @@ DEFAULT_SUB_SETTINGS = {"CHANNELS": {}}
 
 ROLEBOARD_STRUCT = {
     "MESSAGE": None,
-    "EMOJI:ROLE": {}
+    "ROLES": {}
 }
 
 """
