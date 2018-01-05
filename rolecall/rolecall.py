@@ -72,12 +72,8 @@ class RoleCall:
         """ record entry to settings file """
 
         settings = self.settings
-        settings["SERVERS"] = {}
-        settings["SERVERS"][entry.server.id] = {}
-        settings["SERVERS"][entry.server.id]["CHANNELS"] = {}
-        settings["SERVERS"][entry.server.id]["CHANNELS"][entry.channel.id] = {}
-        keyring = settings["SERVERS"][entry.server.id]["CHANNELS"][entry.channel.id]
-        keyring = ROLEBOARD_STRUCT
+        keyring = settings["SERVERS"][entry.server.id]["CHANNELS"]
+        keyring[entry.channel.id] = ROLEBOARD_STRUCT
         keyring['MESSAGE'] = entry.message.id
         keyring['ROLES'] = {entry.emoji.id: entry.role.id}
         self._save()
