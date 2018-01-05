@@ -14,10 +14,10 @@ log = logging.getLogger("red.rolecall")
 SETTINGS_PATH = "data/rolecall/settings.json"
 DEFAULT_SETTINGS = {}
 
-ENTRY_STRUCT = {
+ROLE_RECORD_STRUCT = {
+    "EMOJI_ID": None,
     "ROLE_ID": None,
-    "ROLE_NAME": None,
-    "EMOJI_ID": None
+    "ROLE_NAME": None
     }
 
 """
@@ -71,12 +71,14 @@ class RoleCall:
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
-
-        self.settings[entry.server.id][entry.channel.id] = DEFAULT_SETTINGS
-        keyring = self.settings[entry.server.id][entry.channel.id]
-        keyring[entry.message.id] = ENTRY_STRUCT
-        keyring[entry.message.id]['EMOJI_ID'] = entry.emoji.id
-        keyring[entry.message.id]['ROLE_ID'] = entry.role.id
+        settings = self.settings
+        settings[entry.server.id][entry.channel.id] = {}
+        settings[entry.server.id][entry.channel.id][entry.message.id] = {}
+        keyring = settings[entry.server.id][entry.channel.id][entry.message.id]
+        keyring[entry.emoji.name] = ROLE_RECORD_STRUCT
+        keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
+        keyring[entry.emoji.name]['ROLE_ID'] = entry.role.id
+        keyring[entry.emoji.name]['ROLE_NAME'] = entry.role.name
         self._save()
 
     def _check_entry(self, entry: Entry):
