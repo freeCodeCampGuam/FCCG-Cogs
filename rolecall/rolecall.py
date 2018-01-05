@@ -78,6 +78,18 @@ class RoleCall:
         keyring[entry.message.id]['ROLE_ID'] = entry.role.id
         self._save()
 
+    def _check_entry(self, entry: Entry):
+        """ Checks if entry exists in the settings file. 
+
+        Returns true if it does, otherwise, returns false.
+        """ 
+
+        entries = self.settings[entry.server.id][entry.channel.id]
+        if entry.message.id in entries:
+            return True
+        else:
+            return False
+
     @commands.group(pass_context=True, no_pm=True)
     async def roleboard(self, ctx):
         """change roleboard settings"""
