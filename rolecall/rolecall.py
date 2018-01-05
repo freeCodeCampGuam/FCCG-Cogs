@@ -13,9 +13,11 @@ log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
 DEFAULT_SETTINGS = {}
-DEFAULT_SUB_SETTINGS = {"CHANNELS": {}}
 
-ROLEBOARD_STRUCT = {"ENTRIES": {}}
+ENTRY_STRUCT = {
+    "ROLE_ID": None,
+    "EMOJI_ID": None
+    }
 
 """
 Implementation notes:
@@ -69,12 +71,11 @@ class RoleCall:
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
 
-        settings = self.settings
-        emoji_to_role = {entry.emoji.id: entry.role.id}
-
-        keyring = settings[entry.server.id]["CHANNELS"]
-        keyring[entry.channel.id] = ROLEBOARD_STRUCT
-        keyring[entry.channel.id]['ENTRIES'][entry.message.id] = emoji_to_role
+        self.settings[entry.server.id][entry.channel.id] = DEFAULT_SETTINGS
+        keyring = self.settings[entry.server.id][entry.channel.id]
+        keyring[entry.message.id] = ENTRY_STRUCT
+        keyring[entry.message.id]['EMOJI_ID'] = entry.emoji.id
+        keyring[entry.message.id]['ROLE_ID'] = entry.role.id
         self._save()
 
     @commands.group(pass_context=True, no_pm=True)
@@ -85,7 +86,7 @@ class RoleCall:
         if ctx.invoked_subcommand is None:
             await self.bot.send_cmd_help(ctx)
         else:
-            self.settings.setdefault(server.id, deepcopy(DEFAULT_SUB_SETTINGS))
+            self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
     @roleboard.command(pass_context=True, name="channel", no_pm=True)
     async def roleboard_channel(self, ctx, channel: discord.Channel=None):
