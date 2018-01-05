@@ -93,14 +93,14 @@ class RoleCall:
         else:
             return False
 
-    def _get_role_from_entry(self, entry: Entry):
+    async def _get_role_from_entry(self, entry: Entry):
         """ Accesses board entry and retrieves role that corresponds 
         to the emoji given """
 
         settings = self.settings
         keyring = settings[entry.server.id][entry.channel.id][entry.message.id]
         role_name = keyring[entry.emoji.name]['ROLE_NAME']
-        role = self.get_or_create('role', role_name, entry.server)
+        role = await self.get_or_create('role', role_name, entry.server)
         return role
 
     @commands.group(pass_context=True, no_pm=True)
@@ -231,20 +231,22 @@ class RoleCall:
 
         dict_msg = json.loads(msg)
         if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
+            channel = self.bot.get_channel(dict_msg['d']['channel_id'])
             server = channel.server
-            channel = self.bot.get_channel(dict_msg['channel_id'])
-            message = self.bot.get_message(channel, dict_msg['message_id'])
+            message = await self.bot.get_message(channel, dict_msg['d']['message_id'])
             author = message.author
-            emoji_id = dict_msg['emoji']['id']
+            emoji_id = dict_msg['d']['emoji']['id']
             reaction = discord.utils.get(server.emojis, id=emoji_id)
 
             # make Entry object to handle data
             entry = Entry(server, channel, message, author, emoji=reaction)
 
-            # check if Entry exists in settings file
-            if _check_entry(entry):
-                _get_role
-
+            # check if Entry exists in settings file. If true, get role from 
+            # settings file and assign it to the user who reacted
+            if self._check_entry(entry):
+                role = await self._get_role_from_entry(entry)
+                reactor = entry.server.get_member(dict_msg['d']['user_id'])
+                await self.bot.add_roles(reactor, role)
 
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
