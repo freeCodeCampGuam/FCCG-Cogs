@@ -194,6 +194,23 @@ class RoleCall:
 
         return await wait_for_first_response(tasks, converters)
 
+    async def on_socket_raw_receive(self, msg):
+        """ Listens to reaction adds. If reaction was added to a roleboard entry, assign corresponding role to user depending on the emoji pressed """
+
+        
+        """ format of raw reaction message:
+
+        {'d': {'channel_id': '206326891752325122', 'user_id': '208810344729018369', 'message_id': '398806773542158357', 'emoji': {'animated': False, 'id': '344074096398565376', 'name': 'blobderpy'}}, 's': 269, 't': 'MESSAGE_REACTION_ADD', 'op': 0}
+
+        """
+
+        dict_msg = json.loads(msg)
+        if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
+            channel = self.bot.get_channel(dict_msg['channel_id'])
+            server = channel.server
+
+
+
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
 
