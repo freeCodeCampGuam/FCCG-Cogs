@@ -74,8 +74,8 @@ class RoleCall:
         settings = self.settings
         keyring = settings["SERVERS"][entry.server.id]["CHANNELS"]
         keyring[entry.channel.id] = ROLEBOARD_STRUCT
-        keyring['MESSAGE'] = entry.message.id
-        keyring['ROLES'] = {entry.emoji.id: entry.role.id}
+        keyring[entry.channel.id]['MESSAGE'] = entry.message.id
+        keyring[entry.channel.id]['ROLES'] = {entry.emoji.id: entry.role.id}
         self._save()
 
     @commands.group(pass_context=True, no_pm=True)
