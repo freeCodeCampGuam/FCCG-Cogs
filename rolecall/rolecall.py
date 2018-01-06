@@ -88,7 +88,7 @@ class RoleCall:
         Returns true if it does, otherwise, returns false.
         """ 
 
-        entries = self.settings[entry.server.id][entry.channel.id]
+        entries = self.settings[entry.server.id][entry.roleboard_channel.id]
         if entry.content_or_message_id in entries:
             return True
         else:
@@ -98,8 +98,10 @@ class RoleCall:
         """ Accesses board entry and retrieves role that corresponds 
         to the emoji given """
 
-        settings = self.settings
-        keyring = settings[entry.server.id][entry.channel.id][entry.content_or_message_id]
+        server_id = entry.server.id
+        roleboard_id = entry.roleboard_channel.id
+        message_id = entry.content_or_message_id
+        keyring = self.settings[server_id][roleboard_id][message_id]
         role_name = keyring[entry.emoji.name]['ROLE_NAME']
         role = await self.get_or_create('role', role_name, entry.server)
         return role
@@ -239,7 +241,8 @@ class RoleCall:
             channel = self.bot.get_channel(dict_msg['d']['channel_id'])
             server = channel.server
             message_id = dict_msg['d']['message_id']
-            author = self.bot.get_message(channel, message_id).author
+            message = await self.bot.get_message(channel, message_id)
+            author = message.author
             emoji_id = dict_msg['d']['emoji']['id']
             reaction = discord.utils.get(server.emojis, id=emoji_id)
 
