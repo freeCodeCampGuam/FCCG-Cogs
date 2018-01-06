@@ -75,7 +75,7 @@ class RoleCall:
         server = self.settings[entry.server.id]
         server.setdefault(entry.roleboard_channel.id, {})
         server[entry.channel.id].setdefault(entry.content_or_message_id, {})
-        keyring = server[entry.channel.id][entry.message.id]
+        keyring = server[entry.channel.id][entry.content_or_message_id]
         keyring[entry.emoji.name] = deepcopy(ROLE_RECORD_STRUCT)
         keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
         keyring[entry.emoji.name]['ROLE_ID'] = entry.role.id
@@ -89,7 +89,7 @@ class RoleCall:
         """ 
 
         entries = self.settings[entry.server.id][entry.channel.id]
-        if entry.message.id in entries:
+        if entry.content_or_message_id in entries:
             return True
         else:
             return False
@@ -99,7 +99,7 @@ class RoleCall:
         to the emoji given """
 
         settings = self.settings
-        keyring = settings[entry.server.id][entry.channel.id][entry.message.id]
+        keyring = settings[entry.server.id][entry.channel.id][entry.content_or_message_id]
         role_name = keyring[entry.emoji.name]['ROLE_NAME']
         role = await self.get_or_create('role', role_name, entry.server)
         return role
