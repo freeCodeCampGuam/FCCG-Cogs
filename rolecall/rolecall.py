@@ -55,7 +55,7 @@ class Entry:
 
     def __init__(self, server: discord.Server, roleboard_channel: discord.Channel, content_or_message_id: str, author: discord.Member, role: discord.Role=None, emoji: discord.Emoji=None):
         self.server = server
-        self.channel = roleboard_channel
+        self.roleboard_channel = roleboard_channel
         self.content_or_message_id = content_or_message_id
         self.author = author
         self.role = role or None
