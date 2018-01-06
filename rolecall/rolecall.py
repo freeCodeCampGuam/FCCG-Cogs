@@ -74,8 +74,8 @@ class RoleCall:
 
         server = self.settings[entry.server.id]
         server.setdefault(entry.roleboard_channel.id, {})
-        server[entry.channel.id].setdefault(entry.content_or_message_id, {})
-        keyring = server[entry.channel.id][entry.content_or_message_id]
+        server[entry.roleboard_channel.id].setdefault(entry.content_or_message_id, {})
+        keyring = server[entry.roleboard_channel.id][entry.content_or_message_id]
         keyring[entry.emoji.name] = deepcopy(ROLE_RECORD_STRUCT)
         keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
         keyring[entry.emoji.name]['ROLE_ID'] = entry.role.id
@@ -239,7 +239,7 @@ class RoleCall:
             channel = self.bot.get_channel(dict_msg['d']['channel_id'])
             server = channel.server
             message_id = dict_msg['d']['message_id']
-            author = message.author
+            author = self.bot.get_message(channel, message_id).author
             emoji_id = dict_msg['d']['emoji']['id']
             reaction = discord.utils.get(server.emojis, id=emoji_id)
 
