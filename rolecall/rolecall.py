@@ -151,9 +151,9 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_name: str, content_or_message_id: str,  reaction: discord.Emoji, role_board: discord.Channel, channel: str
+    async def roleboard_add(self, ctx, role_name: str, role_emoji: discord.Emoji, role_channel: str, content_or_message_id: str,  role_board: discord.Channel
                             ):
-        """Add an entry to the roleboard. If a message ID is provided, post a role to the existing message/entry"""
+        """Add an entry to a roleboard. If a message ID is provided, post a role to the existing message/entry"""
         server = ctx.message.server
         author = ctx.message.author
 
@@ -164,13 +164,13 @@ class RoleCall:
 
         # check if two channel arguments were provided or only one
         if len(channels) == 1:
-            role_channel = await self.get_or_create("channel", channel, server)
+            role_channel = await self.get_or_create("channel", role_channel, server)
         else:
-            role_channel = self.bot.get_channel(channels[1]) 
+            role_channel = self.bot.get_channel(channels[0]) 
 
         # make Entry object
         entry = Entry(server, role_board, content_or_message_id, author, 
-                      role=role_obj, emoji=reaction)
+                      role=role_obj, emoji=role_emoji)
         
         # check if message ID was provided. If yes, post the new role to the 
         # message associated with the ID, if not, post the new entry to the 
