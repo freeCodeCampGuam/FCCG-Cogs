@@ -238,13 +238,13 @@ class RoleCall:
         if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
             channel = self.bot.get_channel(dict_msg['d']['channel_id'])
             server = channel.server
-            message = await self.bot.get_message(channel, dict_msg['d']['message_id'])
+            message_id = dict_msg['d']['message_id']
             author = message.author
             emoji_id = dict_msg['d']['emoji']['id']
             reaction = discord.utils.get(server.emojis, id=emoji_id)
 
             # make Entry object to handle data
-            entry = Entry(server, channel, message, author, emoji=reaction)
+            entry = Entry(server, channel, message_id, author, emoji=reaction)
 
             # check if Entry exists in settings file. If true, get role from 
             # settings file and assign it to the user who reacted
