@@ -174,9 +174,9 @@ class RoleCall:
         # message associated with the ID, if not, post the new entry to the 
         # chosen role board
         try:
-            await self.post_role(role_board, reaction, content_or_message_id)
+            await self.post_role(entry)
         except Exception as e:
-            msg = await self.post_entry(content_or_message_id, reaction, role_board)
+            msg = await self.post_entry(entry)
             entry.content_or_message_id = msg.id
 
         # record the entry
