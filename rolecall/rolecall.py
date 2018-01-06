@@ -164,15 +164,18 @@ class RoleCall:
             role_channel = await self.get_or_create("channel", channel, server)
         else:
             role_channel = self.bot.get_channel(channels[1]) 
+
+        # make Entry object
+        entry = Entry(server, role_board, content_or_message_id, author, 
+                      role=role_obj, emoji=reaction)
         
-        # check if message ID was provided. If yes, post the new role to the message associated with the ID, if not, post the new entry to the chosen role board
+        # check if message ID was provided. If yes, post the new role to the 
+        # message associated with the ID, if not, post the new entry to the 
+        # chosen role board
         try:
             msg = await self.post_role(role_board, reaction, content_or_message_id)
         except Exception as e:
             msg = await self.post_entry(content_or_message_id, reaction, role_board)
-
-        # make Entry object
-        entry = Entry(server, role_board, msg, author, role=role_obj, emoji=reaction)
 
         # record the entry
         self._record_entry(entry)
