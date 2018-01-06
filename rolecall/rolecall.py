@@ -181,18 +181,18 @@ class RoleCall:
         self._record_entry(entry)
 
       
-    async def post_entry(self, message: str, role_reaction: discord.Emoji, role_board: discord.Channel):
+    async def post_entry(self, entry: Entry):
         """ post entry to chosen roleboard(channel) """
 
-        msg = await self.bot.send_message(role_board, content=message)
-        await self.bot.add_reaction(msg, role_reaction)
+        msg = await self.bot.send_message(entry.roleboard_channel, content=entry.content_or_message_id)
+        await self.bot.add_reaction(msg, entry.emoji)
         return msg
 
-    async def post_role(self, role_board: discord.Channel, role_reaction: discord.Emoji, entry_id: str):
+    async def post_role(self, entry: Entry):
         """ post role to chosen entry(message) """
 
-        msg = await self.bot.get_message(role_board, entry_id)
-        await self.bot.add_reaction(msg, role_reaction)
+        msg = await self.bot.get_message(entry.roleboard_channel, entry.content_or_message_id)
+        await self.bot.add_reaction(msg, entry.emoji)
         return msg
 
     async def prompt(self, ctx, *args, **kwargs):
