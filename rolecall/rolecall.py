@@ -51,9 +51,9 @@ TODO: Make Entry/Call a class that handles the data for me (what is an entry on 
 """
 
 class Entry:
-    """Entry on the roleboard"""
+    """Entry on the roleboard. Constructor only accepts one role because only a single role can be specified in the add command """
 
-    def __init__(self, server: discord.Server, channel: discord.Channel, message: discord.Message, author: discord.Member, role: discord.Role=None, emoji: discord.Emoji=None):
+    def __init__(self, server: discord.Server, roleboard_channel: discord.Channel, content_or_message_id: str, author: discord.Member, role: discord.Role=None, emoji: discord.Emoji=None):
         self.server = server
         self.channel = channel
         self.message = message
