@@ -75,7 +75,7 @@ class RoleCall:
         server.setdefault(entry.channel.id, {})
         server[entry.channel.id].setdefault(entry.message.id, {})
         keyring = server[entry.channel.id][entry.message.id]
-        keyring[entry.emoji.name] = ROLE_RECORD_STRUCT
+        keyring[entry.emoji.name] = deepcopy(ROLE_RECORD_STRUCT)
         keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
         keyring[entry.emoji.name]['ROLE_ID'] = entry.role.id
         keyring[entry.emoji.name]['ROLE_NAME'] = entry.role.name
