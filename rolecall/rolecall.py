@@ -71,9 +71,10 @@ class RoleCall:
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
+
         server = self.settings[entry.server.id]
-        server.setdefault(entry.channel.id, {})
-        server[entry.channel.id].setdefault(entry.message.id, {})
+        server.setdefault(entry.roleboard_channel.id, {})
+        server[entry.channel.id].setdefault(entry.content_or_message_id, {})
         keyring = server[entry.channel.id][entry.message.id]
         keyring[entry.emoji.name] = deepcopy(ROLE_RECORD_STRUCT)
         keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
