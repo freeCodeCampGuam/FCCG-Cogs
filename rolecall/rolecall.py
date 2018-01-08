@@ -227,17 +227,25 @@ class RoleCall:
         return await wait_for_first_response(tasks, converters)
 
     async def on_socket_raw_receive(self, msg):
-        """ Listens to reaction adds. If reaction was added to a roleboard entry, assign corresponding role to user depending on the emoji pressed """
+        """ Listens to reaction adds and reaction removes. If reaction was added to a roleboard entry, assign corresponding role to user depending on the emoji pressed. If a reaction was removed, unassign role from user. """
 
         
-        """ format of raw reaction message:
+        """ format of raw reaction add message:
 
         {'d': {'channel_id': '206326891752325122', 'user_id': '208810344729018369', 'message_id': '398806773542158357', 'emoji': {'animated': False, 'id': '344074096398565376', 'name': 'blobderpy'}}, 's': 269, 't': 'MESSAGE_REACTION_ADD', 'op': 0}
 
         """
 
+        """ format of raw reaction remove message:
+
+        {"t":"MESSAGE_REACTION_REMOVE","s":308,"op":0,"d":{"user_id":"208810344729018369","message_id":"399903367175864320","emoji":{"name":"irdumbs","id":"344074096092381184","animated":false},"channel_id":"206326891752325122"}}
+
+        """
+
         dict_msg = json.loads(msg)
-        if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
+
+        if dict_msg['t'] == 'MESSAGE_REACTION_ADD' or dict_msg['t'] == 'MESSAGE_REACTION_REMOVE':
+
             channel = self.bot.get_channel(dict_msg['d']['channel_id'])
             server = channel.server
             message_id = dict_msg['d']['message_id']
@@ -249,15 +257,25 @@ class RoleCall:
             # make Entry object to handle data
             entry = Entry(server, channel, message_id, author, emoji=reaction)
 
-            # check if Entry exists in settings file. If true, get role from 
-            # settings file and assign it to the user who reacted
+            # check if Entry exists in settings file. 
             if self._check_entry(entry):
+
+                # get role and user
                 role = await self._get_role_from_entry(entry)
                 reactor = entry.server.get_member(dict_msg['d']['user_id'])
 
-                # assign role if client is not a bot
-                if not reactor.bot:
-                    await self.bot.add_roles(reactor, role)
+                # assign role to user who added the reaction 
+                if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
+                    
+                    # assign role if client is not a bot
+                    if not reactor.bot:
+                        await self.bot.add_roles(reactor, role)
+
+                # unassign role from user who removed the reaction
+                if dict_msg['t'] == 'MESSAGE_REACTION_REMOVE':
+                   await self.bot.remove_roles(reactor, role)
+
+
 
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
