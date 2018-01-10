@@ -489,7 +489,7 @@ class Wink:
 
         session['repl'] = Interpreter()
 
-        if Interpreter is FoxDotInterpreter:
+        if Interpreter is self.interpreters['foxdot']['class']:
             abs_sample_path = os.path.join(os.getcwd(), SAMPLE_PATH)
             session['repl'].evaluate('Samples.addPath'
                                      '("{}")'.format(abs_sample_path))
