@@ -9,6 +9,7 @@ import io
 import re
 import sys
 import asyncio
+import os
 from collections import deque
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
