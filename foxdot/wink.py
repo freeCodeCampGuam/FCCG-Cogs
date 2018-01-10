@@ -1,7 +1,7 @@
 import discord
 from discord.ext import commands
 from cogs.utils import checks
-from cogs.utils import dataIO
+from cogs.utils.dataIO import dataIO
 from cogs.utils.chat_formatting import pagify
 import traceback
 from contextlib import redirect_stdout
