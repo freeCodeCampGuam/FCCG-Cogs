@@ -153,7 +153,7 @@ class Wink:
         self.previous_sample_searches = {}
         self.interpreters = self._get_interpreter_data(self.settings['INTERPRETER_PATHS'])
 
-    def _get_interpreter_date(self, paths):
+    def _get_interpreter_data(self, paths):
         # load interpreter paths into sys.path
         for path in paths.values():
             if path is not None and path not in sys.path:
