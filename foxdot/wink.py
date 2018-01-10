@@ -84,7 +84,7 @@ class Song:
 
 
 class Downloader(threading.Thread):
-    def __init__(self, url, options):
+    def __init__(self, url, options, download=False):
         super().__init__()
         self.url = url
         self.done = threading.Event()
@@ -92,6 +92,7 @@ class Downloader(threading.Thread):
         self._yt = None
         self.error = None
         self.options = options
+        self._download = download
 
     def run(self):
         try:
@@ -101,6 +102,9 @@ class Downloader(threading.Thread):
         except OSError as e:
             print("An operating system error occurred while downloading URL "
                   "'{}':\n'{}'".format(self.url, str(e)))
+
+        if not self._download:
+            return
 
         if not os.path.isfile(self.options['outtmpl']):
             self.video = self._yt.extract_info(self.url)
@@ -146,6 +150,7 @@ class Wink:
         self.sessions = {}
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
+        self.previous_sample_searches = {}
         # load interpreter paths into sys.path
         paths = self.settings['INTERPRETER_PATHS']
         for path in paths.values():
@@ -206,8 +211,15 @@ class Wink:
                 content = content[len(p):]
                 return content.strip(' \n')
 
+    async def _download_sample(self, search, options, to_download):
+        d = Downloader(search, options, download=to_download)
+        d.start()
+        while d.is_alive():
+            await asyncio.sleep(1)
+        return d
+
     @commands.command(pass_context=True)
-    async def sample(self, ctx, name, *, search=None):
+    async def sample(self, ctx, name, *, url_or_search_terms=None):
         """search for and download a sample from youtube
 
         the name is used as the search parameter if none is given
@@ -223,44 +235,59 @@ class Wink:
         # TODO: limit usage to winkers
         author = ctx.message.author
 
-        if search is None:
-            search = name
+        # search is name if None
+        search = url_or_search_terms or name
+
+        options = youtube_dl_options.copy()
+        options['outtmpl'] = SAMPLE_PATH + name + '.%(ext)s'
+
+        sample_exists = path = SAMPLE_PATH + name + '.wav'
+
+        # resolve url
+        # see if we've resolved before
+        # and values in case they rename samples I guess
+        if (search in self.previous_sample_searches or
+                search in self.previous_sample_searches.values()):
+            search = self.previous_sample_searches.get(search, search)
+
+        m = None
+        if not search.startswith('http'):
+            s = ('Sample name exists! One sec, grabbing link..'
+                 if sample_exists else '🔎..')
+            m = await self.bot.say(s)
+            d = await self._download_sample('[SEARCH:]' + search, options, False)
+            self.previous_sample_searches[search] = d.url
+            search = d.url
+
 
         default_sample = {'SOURCE': 'unknown source',
                           'REQUESTER': {'NAME_DISCRIM': 'unknown person', 
                                         'ID': None}}
         sample_data = self.settings['SAMPLES'].get(name, default_sample)
-        
-        prompt = '🔎..'
 
+        prompt = 'Downloading: ' + search
         path = SAMPLE_PATH + name + '.wav'
-        if os.path.exists(path):
-            s = name + (' already exists. It comes from {} and was requested by {}.\nreplace it? (yes/no)'
-                        ''.format(sample_data['SOURCE'], sample_data['REQUESTER']['NAME_DISCRIM']))
-            await self.bot.say(s)
+        if sample_exists:
+            s = ('{} already exists.\nIt comes from {}\nRequested by '
+                 '**{}**.\n\nreplace it with {} ? (yes/no)'
+                 ''.format(name, sample_data['SOURCE'], 
+                           sample_data['REQUESTER']['NAME_DISCRIM'],
+                           search))
+            if m is None:
+                await self.bot.say(s)
+            else:
+                await self.bot.edit_message(m, new_content=s)
             answer = await self.bot.wait_for_message(timeout=45, author=author)
             
             if answer and answer.content.lower() in ('y', 'yes'):
-                prompt = 'ok. replacing ' + path + '\n' + prompt
+                prompt = 'ok. replacing ' + path + '\n'
                 os.remove(path)
             else:
                 return await self.bot.say("ok. I won't overwrite it.")
 
         m = await self.bot.say(prompt)
 
-        options = youtube_dl_options.copy()
-        options['outtmpl'] = SAMPLE_PATH + name + '.%(ext)s'
-
-        d = Downloader('[SEARCH:]' + search, options)
-        #self.d = d
-        d.start()
-
-        prompted = False;
-        while d.is_alive():
-            if "http" in d.url and not prompted:
-                await self.bot.edit_message(m, new_content='Downloading: ' + d.url)
-                prompted = True
-            await asyncio.sleep(1)
+        d = await self._download_sample(search, options, True)
 
         sample_data['SOURCE'] = d.url
         sample_data['REQUESTER'] = {'NAME_DISCRIM': str(author), 
