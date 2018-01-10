@@ -1,6 +1,7 @@
 import discord
 from discord.ext import commands
 from cogs.utils import checks
+from cogs.utils import dataIO
 from cogs.utils.chat_formatting import pagify
 import traceback
 from contextlib import redirect_stdout
@@ -12,8 +13,19 @@ from collections import deque
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 
-sys.path.insert(0, 'PATH_TO_TROOP')
-from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
+
+SETTINGS_PATH = "data/foxdot/settings.json"
+
+# TODO: clean this up :3
+settings = dataIO.load_json(SETTINGS_PATH)
+if settings['INTERPRETER_PATHS']['TROOP'] is not None:
+    sys.path.insert(0, settings['INTERPRETER_PATHS']['TROOP'])
+try:
+    from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
+except:
+    FoxDotInterpreter = None
+    TidalInterpreter = None
+    StackTidalInterpreter = None
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
@@ -93,7 +105,11 @@ class Wink:
     def __init__(self, bot):
         self.bot = bot
         self.sessions = {}
-        self.settings = {'REPL_PREFIX': ['`']}
+        self.repl_settings = {'REPL_PREFIX': ['`']}
+        self.settings = dataIO.load_json(SETTINGS_PATH)
+
+    def save():
+        dataIO.save_json(SETTINGS_PATH, self.settings)
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -102,7 +118,7 @@ class Wink:
             return '\n'.join(content.split('\n')[1:-1])
 
         # remove `foo`
-        for p in self.settings["REPL_PREFIX"]:
+        for p in self.repl_settings["REPL_PREFIX"]:
             if content.startswith(p):
                 if p == '`':
                     return content.strip('` \n')
@@ -154,6 +170,32 @@ class Wink:
              "\"808 808bd 808cy 808hc 808ht 808lc 808lt 808mc 808mt 808oh 808sd 909 ab ade ades2 ades3 ades4 alex alphabet amencutup armora arp arpy auto baa baa2 bass bass0 bass1 bass2 bass3 bassdm bassfoo battles bd bend bev bin birds birds3 bleep blip blue bottle breaks125 breaks152 breaks157 breaks165 breath bubble can casio cb cc chin chink circus clak click clubkick co control cosmicg cp cr crow d db diphone diphone2 dist dork2 dorkbot dr dr2 dr55 dr_few drum drumtraks e east electro1 erk f feel feelfx fest fire flick fm foo future gab gabba gabbaloud gabbalouder glasstap glitch glitch2 gretsch gtr h hand hardcore hardkick haw hc hh hh27 hit hmm ho hoover house ht if ifdrums incoming industrial insect invaders jazz jungbass jungle jvbass kicklinn koy kurt latibro led less lighter linnhats lt made made2 mash mash2 metal miniyeah moan monsterb moog mouth mp3 msg mt mute newnotes noise noise2 notes numbers oc odx off outdoor pad padlong pebbles perc peri pluck popkick print proc procshort psr rave rave2 ravemono realclaps reverbkick rm rs sax sd seawolf sequential sf sheffield short sid sine sitar sn space speakspell speech speechless speedupdown stab stomp subroc3d sugar sundance tabla tabla2 tablex tacscan tech techno tink tok toys trump ul ulgab uxay v voodoo wind wobble world xmas yeah\"\n"
              "```\n")
         await self.bot.say(s)
+
+    @commands.group(pass_context=True)
+    async def winkset(self, ctx):
+        """settings for wink"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+    
+    @winkset.command(pass_context=True, name="path")
+    async def winkset_path(self, ctx, interpreter, *, path):
+        """set the path(s) to your interpreter(s)"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+        supported = ("troop",)
+        if interpreter.lower() not in supported:
+            await self.bot.say('Only these interpreters are supported atm:\n'
+                               '{}'.format(' '.join(supported)))
+            return NotImplemented
+
+        interpreter = interpreter.upper()
+
+        self.settings["INTERPRETER_PATHS"][interpreter] = path
+        self.save()
+        await self.bot.say(interpreter + " path updated to: " + path +
+                           "\n`" + ctx.prefix + "reload wink` to take effect.")
+
 
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
@@ -300,6 +342,12 @@ class Wink:
                                '(use `stack` if you use stack for your Tidal)')
             return
 
+        if Interpreter is None:
+            await self.bot.say("Troop hasn't been installed or the path hasn't "
+                               "been setup yet. Use `{}winkset path troop "
+                               "<path>` to add it.".format(ctx.prefix))
+            return
+
         if channel.id in self.sessions:
             await self.bot.say("Already running a wink session in this channel")
             return
@@ -443,7 +491,7 @@ class Wink:
         prompt = await self.bot.send_message(channel,
                                              fmt.format(member.mention))
         def check(m):
-            ps = tuple(self.settings["REPL_PREFIX"])
+            ps = tuple(self.repl_settings["REPL_PREFIX"])
             return m.content.startswith(ps)
         answer = await self.bot.wait_for_message(timeout=60*5, author=member,
                                                  check=check, channel=channel)
@@ -609,6 +657,31 @@ async def wait_for_reaction_remove(bot, emoji=None, *, user=None,
         return None
 
 
+def check_folders():
+    paths = ("data/foxdot", SAMPLE_PATH)
+    for path in paths:
+      if not os.path.exists(path):
+          print("Creating {} folder...".format(path))
+          os.makedirs(path)
+
+def check_files():
+    default = {"SAMPLES": {}, "INTERPRETER_PATHS": {"TROOP": None}}
+
+    if not dataIO.is_valid_json(SETTINGS_PATH):
+        print("Creating default foxdot settings.json...")
+        dataIO.save_json(SETTINGS_PATH, default)
+    else:  # consistency check
+        current = dataIO.load_json(SETTINGS_PATH)
+        if current.keys() != default.keys():
+            for key in default.keys():
+                if key not in current.keys():
+                    current[key] = default[key]
+                    print(
+                        "Adding " + str(key) + " field to foxdot settings.json")
+            dataIO.save_json(SETTINGS_PATH, current)
+
 def setup(bot):
+    check_folders()
+    check_files()
     n = Wink(bot)
     bot.add_cog(n)
