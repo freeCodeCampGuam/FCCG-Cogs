@@ -207,7 +207,7 @@ class Wink:
                 return content.strip(' \n')
 
     @commands.command(pass_context=True)
-    async def sample(self, ctx, name, search=None):
+    async def sample(self, ctx, name, *, search=None):
         """search for and download a sample from youtube
 
         the name is used as the search parameter if none is given
