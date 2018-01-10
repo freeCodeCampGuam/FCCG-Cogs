@@ -185,7 +185,7 @@ class Wink:
                                  'intro': self.interpreters['tidal']['intro'],
                                  'hush':  self.interpreters['tidal']['hush']}
 
-    def save():
+    def save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
     def cleanup_code(self, content):
