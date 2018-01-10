@@ -16,6 +16,7 @@ from glob import glob
 from collections import deque
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
+from copy import deepcopy
 
 
 SETTINGS_PATH = "data/foxdot/settings.json"
@@ -206,8 +207,8 @@ class Wink:
                 content = content[len(p):]
                 return content.strip(' \n')
 
-    @commands.command()
-    async def sample(self, name, search=None):
+    @commands.command(pass_context=True)
+    async def sample(self, ctx, name, search=None):
         """search for and download a sample from youtube
 
         the name is used as the search parameter if none is given
@@ -219,11 +220,32 @@ class Wink:
         * for use in FoxDot only atm
         """
         # TODO: limit usage to winkers
+        author = ctx.message.author
+
         if search is None:
             search = name
-        if glob(SAMPLE_PATH + name + '.*'):
-            await self.bot.say(name + ' already exists')
-            return
+
+        default_sample = {'SOURCE': 'unknown source',
+                          'REQUESTER': {'NAME_DISCRIM': 'unknown person', 
+                                        'ID': None}}
+        sample_data = self.settings['SAMPLES'].get(name, default_sample)
+        
+        prompt = '🔎..'
+
+        path = SAMPLE_PATH + name + '.wav'
+        if os.path.exists(path):
+            s = name + (' already exists. It comes from {} and was requested by {}.\nreplace it? (yes/no)'
+                        ''.format(sample_data['SOURCE'], sample_data['REQUESTER']['NAME_DISCRIM']))
+            await self.bot.say(s)
+            answer = await self.bot.wait_for_message(timeout=45, author=author)
+            
+            if answer and answer.content.lower() in ('y', 'yes'):
+                prompt = 'ok. replacing ' + path + '\n' + prompt
+                os.remove(path)
+            else:
+                return await self.bot.say("ok. I won't overwrite it.")
+
+        m = await self.bot.say(prompt)
 
         options = youtube_dl_options.copy()
         options['outtmpl'] = SAMPLE_PATH + name + '.%(ext)s'
@@ -232,9 +254,18 @@ class Wink:
         #self.d = d
         d.start()
 
+        prompted = False;
         while d.is_alive():
+            if "http" in d.url and not prompted:
+                await self.bot.edit_message(m, new_content='Downloading: ' + d.url)
+                prompted = True
             await asyncio.sleep(1)
 
+        sample_data['SOURCE'] = d.url
+        sample_data['REQUESTER'] = {'NAME_DISCRIM': str(author), 
+                                    'ID': author.id}
+        self.settings['SAMPLES'][name] = sample_data
+        self.save()
         await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
     @commands.command(pass_context=True)
