@@ -9,13 +9,17 @@ import io
 import re
 import sys
 import asyncio
+import youtube_dl
+import threading
 import os
+from glob import glob
 from collections import deque
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 
 
 SETTINGS_PATH = "data/foxdot/settings.json"
+SAMPLE_PATH = 'data/foxdot/samples/'
 
 # TODO: clean this up :3
 settings = dataIO.load_json(SETTINGS_PATH)
@@ -30,6 +34,24 @@ except:
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
+
+youtube_dl_options = {
+    'source_address': '0.0.0.0',
+    'format': 'bestaudio/best',
+    'extractaudio': True,
+    'audioformat': 'wav',
+    'postprocessors': [{
+        'key': 'FFmpegExtractAudio',
+        'preferredcodec': 'wav',
+    }],
+    'nocheckcertificate': True,
+    'ignoreerrors': False,
+    'quiet': True,
+    'no_warnings': True,
+    'outtmpl': SAMPLE_PATH+"%(id)s",
+    'default_search': 'auto',
+    'encoding': 'utf-8'
+}
 
 INTERPRETERS = {
     'foxdot': {'class': FoxDotInterpreter,
@@ -87,6 +109,63 @@ INTERPRETERS['stack'] = {'class': StackTidalInterpreter,
 _reaction_remove_events = set()
 
 
+# ripped from audio.py
+class Song:
+    def __init__(self, **kwargs):
+        self.__dict__ = kwargs
+        self.title = kwargs.pop('title', None)
+        self.id = kwargs.pop('id', None)
+        self.url = kwargs.pop('url', None)
+        self.webpage_url = kwargs.pop('webpage_url', "")
+        self.duration = kwargs.pop('duration', 60)
+        self.start_time = kwargs.pop('start_time', None)
+        self.end_time = kwargs.pop('end_time', None)
+        self.ext = kwargs.pop('ext', None)
+
+
+class Downloader(threading.Thread):
+    def __init__(self, url, options):
+        super().__init__()
+        self.url = url
+        self.done = threading.Event()
+        self.song = None
+        self._yt = None
+        self.error = None
+        self.options = options
+
+    def run(self):
+        try:
+            self.get_info()
+        except youtube_dl.utils.DownloadError as e:
+            self.error = str(e)
+        except OSError as e:
+            print("An operating system error occurred while downloading URL "
+                  "'{}':\n'{}'".format(self.url, str(e)))
+
+        if not os.path.isfile(self.options['outtmpl']):
+            video = self._yt.extract_info(self.url)
+            self.video = video
+            self.song = Song(**video)
+    
+    def get_info(self):
+        if self._yt is None:
+            self._yt = youtube_dl.YoutubeDL(self.options)
+        if "[SEARCH:]" not in self.url:
+            video = self._yt.extract_info(self.url, download=False,
+                                          process=False)
+        else:
+            self.url = self.url[9:]
+            yt_id = self._yt.extract_info(
+                self.url, download=False)["entries"][0]["id"]
+            # Should handle errors here ^
+            self.url = "https://youtube.com/watch?v={}".format(yt_id)
+            video = self._yt.extract_info(self.url, download=False,
+                                          process=False)
+
+        if(video is not None):
+            self.song = Song(**video)
+
+
 class ReactionRemoveEvent(asyncio.Event):
     def __init__(self, emojis, author, check=None):
         super().__init__()
@@ -125,6 +204,37 @@ class Wink:
                     return content.strip('` \n')
                 content = content[len(p):]
                 return content.strip(' \n')
+
+    @commands.command()
+    async def sample(self, name, search=None):
+        """search for and download a sample from youtube
+
+        the name is used as the search parameter if none is given
+
+        TODO: allow urls as well
+        TODO: add list option
+        TODO: save source url/name
+
+        * for use in FoxDot only atm
+        """
+        # TODO: limit usage to winkers
+        if search is None:
+            search = name
+        if glob(SAMPLE_PATH + name + '.*'):
+            await self.bot.say(name + ' already exists')
+            return
+
+        options = youtube_dl_options.copy()
+        options['outtmpl'] = SAMPLE_PATH + name + '.%(ext)s'
+
+        d = Downloader('[SEARCH:]' + search, options)
+        #self.d = d
+        d.start()
+
+        while d.is_alive():
+            await asyncio.sleep(1)
+
+        await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
     @commands.command(pass_context=True)
     async def foxdot(self, ctx):
@@ -381,6 +491,12 @@ class Wink:
         session['pages'].append(self.pager(session)())
 
         session['repl'] = Interpreter()
+
+        if Interpreter is FoxDotInterpreter:
+            abs_sample_path = os.path.join(os.getcwd(), SAMPLE_PATH)
+            session['repl'].evaluate('Samples.addPath'
+                                     '("{}")'.format(abs_sample_path))
+
         await self.bot.say('psst, head into the voice channel')
 
         if not session['console-less']:
