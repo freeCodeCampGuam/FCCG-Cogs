@@ -8,6 +8,7 @@ import logging
 import os
 from copy import deepcopy
 import json
+import threading
 
 log = logging.getLogger("red.rolecall")
 
@@ -68,6 +69,8 @@ class RoleCall:
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
+        self.react_queue = []
+        self.refresh_queue_task = bot.loop.create_task(self.refresh_queue())
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
@@ -227,7 +230,8 @@ class RoleCall:
         return await wait_for_first_response(tasks, converters)
 
     async def on_socket_raw_receive(self, msg):
-        """ Listens to reaction adds and reaction removes. If reaction was added to a roleboard entry, assign corresponding role to user depending on the emoji pressed. If a reaction was removed, unassign role from user. """
+        """ Listens to reaction adds/removes and adds them to the reaction 
+        queue """
 
         
         """ format of raw reaction add message:
@@ -242,40 +246,65 @@ class RoleCall:
 
         """
 
-        dict_msg = json.loads(msg)
+        socket_msg = json.loads(msg)
 
-        if dict_msg['t'] == 'MESSAGE_REACTION_ADD' or dict_msg['t'] == 'MESSAGE_REACTION_REMOVE':
+        if socket_msg['t'] == 'MESSAGE_REACTION_ADD' or socket_msg['t'] == 'MESSAGE_REACTION_REMOVE':
 
-            channel = self.bot.get_channel(dict_msg['d']['channel_id'])
-            server = channel.server
-            message_id = dict_msg['d']['message_id']
-            message = await self.bot.get_message(channel, message_id)
-            author = message.author
-            emoji_id = dict_msg['d']['emoji']['id']
-            reaction = discord.utils.get(server.emojis, id=emoji_id)
+            user_id = socket_msg['d']['user_id']
+            self.react_queue = [r for r in self.react_queue if r['d']['user_id'] != user_id]
+            self.react_queue.append(socket_msg)
 
-            # make Entry object to handle data
-            entry = Entry(server, channel, message_id, author, emoji=reaction)
+    async def refresh_queue(self):
+        """ Iterates the reaction queue every second. If reaction was added to a roleboard entry, corresponding role is assigned to user depending on the emoji pressed. If a reaction was removed, role is unassigned from user. 
+        """
 
-            # check if Entry exists in settings file. 
-            if self._check_entry(entry):
+        """
+        try:
+            while True:
+                print('boo!')
+                await asyncio.sleep(5)
+        except asyncio.CancelledError:
+            pass
+        
+        """
+        while True:
+            for react in self.react_queue:
 
-                # get role and user
-                role = await self._get_role_from_entry(entry)
-                reactor = entry.server.get_member(dict_msg['d']['user_id'])
+                channel = self.bot.get_channel(react['d']['channel_id'])
+                server = channel.server
+                message_id = react['d']['message_id']
+                message = await self.bot.get_message(channel, message_id)
+                author = message.author
+                emoji_id = react['d']['emoji']['id']
+                reaction = discord.utils.get(server.emojis, id=emoji_id)
 
-                # assign role to user who added the reaction 
-                if dict_msg['t'] == 'MESSAGE_REACTION_ADD':
-                    
-                    # assign role if client is not a bot
-                    if not reactor.bot:
-                        await self.bot.add_roles(reactor, role)
+                # make Entry object to handle data
+                entry = Entry(server, channel, message_id, author, 
+                    emoji=reaction)
 
-                # unassign role from user who removed the reaction
-                if dict_msg['t'] == 'MESSAGE_REACTION_REMOVE':
-                   await self.bot.remove_roles(reactor, role)
+                # check if Entry exists in settings file. 
+                if self._check_entry(entry):
 
+                    # get role and user
+                    role = await self._get_role_from_entry(entry)
+                    reactor = entry.server.get_member(react['d']['user_id'])
 
+                    # assign role to user who added the reaction 
+                    if react['t'] == 'MESSAGE_REACTION_ADD':
+                        
+                        # assign role if client is not a bot
+                        if not reactor.bot:
+                            await self.bot.add_roles(reactor, role)
+
+                    # unassign role from user who removed the reaction
+                    if react['t'] == 'MESSAGE_REACTION_REMOVE':
+                       await self.bot.remove_roles(reactor, role)
+
+            # clear queue
+            self.react_queue.clear()
+
+            await asyncio.sleep(0.01)
+        
 
     def _save(self):
         return dataIO.save_json(SETTINGS_PATH, self.settings)
@@ -306,7 +335,9 @@ class RoleCall:
                     return role
             except Exception as e:              # if it is None, create new role
                 try:                            # try in case permission is needed
-                    role = await self.bot.create_role(server, name=object_name)
+                    await self.bot.create_role(server, name=object_name)
+                    await asyncio.sleep(0.05)   # sleep while role is cooking
+                    role = discord.utils.get(server.roles, name=object_name)
                     return role  
                 except Exception as e:
                     await self.bot.say(e)
