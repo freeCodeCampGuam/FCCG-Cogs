@@ -45,6 +45,17 @@ youtube_dl_options = {
 }
 
 
+DEFAULT_SAMPLE = {
+    'SOURCE': 'unknown source',
+    'REQUESTER': {
+        'NAME_DISCRIM': 'unknown person', 
+        'ID': None
+    }
+}
+
+SUPPORTED_SAMPLE_EXTS = ('.wav',)
+
+
 # TODO: rewrite that whole pager nonsense
 # x: reaction remove fix
 # x: addwink can join in right away
@@ -228,8 +239,59 @@ class Wink:
             await asyncio.sleep(1)
         return d
 
-    @commands.command(pass_context=True)
-    async def sample(self, ctx, name, *, url_or_search_terms=None):
+    async def _get_sample_requester(self, server, name):
+        """returns the server member that requested the sample
+        or the last name_discrim he was last known by if not found
+
+        updates the last known name if found to be different"""
+        data = self.settings['SAMPLES'][name]['REQUESTER']
+        # they don't need to know if ppl from other servers change names
+        if data['ID'] is None:
+            return data['NAME_DISCRIM']
+
+        try:
+            member = next(m for m in server.members if m.id == data['ID'])
+        except StopIteration:
+            return data['NAME_DISCRIM']
+
+        if str(member) != data['NAME_DISCRIM']:
+            data['NAME_DISCRIM'] = str(member)
+            self._save()
+
+        return member
+
+    @commands.group(pass_context=True, no_pm=True)
+    async def sample(self, ctx):
+        """additional samples management"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+
+    @sample.command(pass_context=True, name="info")
+    async def sample_info(self, ctx, name=None):
+        """display info about a sample
+
+        if name left blank, lists all samples"""
+        server = ctx.message.server
+
+        ls = [s.split('.')[0] for s in os.listdir(SAMPLE_PATH)
+              if s.endswith(SUPPORTED_SAMPLE_EXTS)]
+        if name is None:
+            await self.bot.say('**Additional samples:**```\n{}```'.format(' '.join(ls)))
+            return
+
+        if name not in ls:
+            return await self.bot.say('That sample does not exist.')
+
+        default = deepcopy(DEFAULT_SAMPLE)
+        data = self.settings['SAMPLES'].setdefault(name, default)
+        requester = await self._get_sample_requester(server, name)
+        fmt = ("Sample: **{}**\n"
+               "Requested by: **{}**\n"
+               "Link: {}".format(name, requester, data['SOURCE']))
+        await self.bot.say(fmt)
+
+    @sample.command(pass_context=True, name="add")
+    async def sample_add(self, ctx, name, *, url_or_search_terms=None):
         """search for and download a sample from youtube
 
         the name is used as the search parameter if none is given
@@ -250,6 +312,7 @@ class Wink:
         * for use in FoxDot only atm
         """
         author = ctx.message.author
+        server = ctx.message.server
 
         # search is name if None
         search = url_or_search_terms or name
@@ -257,7 +320,8 @@ class Wink:
         options = youtube_dl_options.copy()
         options['outtmpl'] = SAMPLE_PATH + name + '.%(ext)s'
 
-        sample_exists = path = SAMPLE_PATH + name + '.wav'
+        path = SAMPLE_PATH + name + '.wav'
+        sample_exists = os.path.exists(path)
 
         # resolve url
         # see if we've resolved before
@@ -275,20 +339,18 @@ class Wink:
             self.previous_sample_searches[search] = d.url
             search = d.url
 
+        default = deepcopy(DEFAULT_SAMPLE)
+        sample_data = self.settings['SAMPLES'].setdefault(name, default)
+        requester = await self._get_sample_requester(server, name)
 
-        default_sample = {'SOURCE': 'unknown source',
-                          'REQUESTER': {'NAME_DISCRIM': 'unknown person', 
-                                        'ID': None}}
-        sample_data = self.settings['SAMPLES'].get(name, default_sample)
+        embed_link = url_or_search_terms != search
 
-        prompt = 'Downloading: ' + search
-        path = SAMPLE_PATH + name + '.wav'
+        prompt = 'Downloading' + (': ' + search if embed_link else '...')
         if sample_exists:
             s = ('{} already exists.\nIt comes from {}\nRequested by '
                  '**{}**.\n\nreplace it with {} ? (yes/no)'
-                 ''.format(name, sample_data['SOURCE'], 
-                           sample_data['REQUESTER']['NAME_DISCRIM'],
-                           search))
+                 ''.format(name, sample_data['SOURCE'], requester, 
+                           search if embed_link else '<{}>'.format(search)))
             if m is None:
                 await self.bot.say(s)
             else:
