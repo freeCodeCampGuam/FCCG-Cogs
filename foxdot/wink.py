@@ -151,11 +151,14 @@ class Wink:
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.previous_sample_searches = {}
+        self.interpreters = self._get_interpreter_data(self.settings['INTERPRETER_PATHS'])
+
+    def _get_interpreter_date(self, paths):
         # load interpreter paths into sys.path
-        paths = self.settings['INTERPRETER_PATHS']
         for path in paths.values():
             if path is not None and path not in sys.path:
                 sys.path.insert(0, path)
+        # TODO: move importing to instantiation per session
         # Troop
         try:
             from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
@@ -175,7 +178,11 @@ class Wink:
                     '[p]foxdot for more on FoxDot!\n'
                     'close this console to reposition it also\n' + '-' * 51 + '\n'
                 ],
-                'hush': 'Clock.clear()'
+                'hush': 'Clock.clear()',
+                'preloads': [
+                    'Samples.addPath("{}")'.format(os.path.join(os.getcwd(),
+                                                                SAMPLE_PATH))
+                ]
             },
             'tidal': {'class': TidalInterpreter,
                 'intro': [
@@ -187,7 +194,8 @@ class Wink:
                     '[p]tidal for more on TidalCycles!\n'
                     'close this console to reposition it also\n' + '-' * 51 + '\n'
                 ],
-                'hush': 'hush'
+                'hush': 'hush',
+                'preloads': []
             }
         }
         self.interpreters['stack'] = {'class': StackTidalInterpreter,
@@ -507,8 +515,6 @@ class Wink:
         kind = kind.lower()
         try:
             Interpreter = self.interpreters[kind]['class']
-            intro = self.interpreters[kind]['intro'].copy()
-            hush = self.interpreters[kind]['hush']
         except KeyError:
             await self.bot.say('Only FoxDot and Tidal interpreters available '
                                '(use `stack` if you use stack for your Tidal)')
@@ -519,6 +525,10 @@ class Wink:
                                "been setup yet. Use `{}winkset path troop "
                                "<path>` to add it.".format(ctx.prefix))
             return
+
+        intro = self.interpreters[kind]['intro'].copy()
+        hush = self.interpreters[kind]['hush']
+        preloads = self.interpreters[kind]['preloads']
 
         if channel.id in self.sessions:
             await self.bot.say("Already running a wink session in this channel")
@@ -553,10 +563,8 @@ class Wink:
 
         session['repl'] = Interpreter()
 
-        if Interpreter is self.interpreters['foxdot']['class']:
-            abs_sample_path = os.path.join(os.getcwd(), SAMPLE_PATH)
-            session['repl'].evaluate('Samples.addPath'
-                                     '("{}")'.format(abs_sample_path))
+        for load in preloads:
+            session['repl'].evaluate(load)
 
         await self.bot.say('psst, head into the voice channel')
 
