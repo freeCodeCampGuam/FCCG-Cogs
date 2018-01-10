@@ -103,9 +103,8 @@ class Downloader(threading.Thread):
                   "'{}':\n'{}'".format(self.url, str(e)))
 
         if not os.path.isfile(self.options['outtmpl']):
-            video = self._yt.extract_info(self.url)
-            self.video = video
-            self.song = Song(**video)
+            self.video = self._yt.extract_info(self.url)
+            self.song = Song(**self.video)
     
     def get_info(self):
         if self._yt is None:
