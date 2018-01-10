@@ -168,7 +168,7 @@ class Wink:
             TidalInterpreter = None
             StackTidalInterpreter = None
 
-        self.interpreters = {
+        interpreters = {
             'foxdot': {'class': FoxDotInterpreter,
                 'intro': [
                     'Welcome!!\nThis is a collaborative window into FoxDot\n'
@@ -199,9 +199,10 @@ class Wink:
                 'preloads': []
             }
         }
-        self.interpreters['stack'] = {'class': StackTidalInterpreter,
-                                 'intro': self.interpreters['tidal']['intro'],
-                                 'hush':  self.interpreters['tidal']['hush']}
+        interpreters['stack'] = {'class': StackTidalInterpreter,
+                                 'intro': interpreters['tidal']['intro'],
+                                 'hush' : interpreters['tidal']['hush']}
+        return interpreters
 
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
