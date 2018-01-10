@@ -9,6 +9,7 @@ import os
 from copy import deepcopy
 import json
 import threading
+from random import randint
 
 log = logging.getLogger("red.rolecall")
 
@@ -20,6 +21,8 @@ ROLE_RECORD_STRUCT = {
     "ROLE_ID": None,
     "ROLE_NAME": None
     }
+
+RGB_VALUE_LIMIT = 16777215
 
 """
 Implementation notes:
@@ -335,7 +338,12 @@ class RoleCall:
                     return role
             except Exception as e:              # if it is None, create new role
                 try:                            # try in case permission is needed
-                    await self.bot.create_role(server, name=object_name)
+
+                    rand_color = discord.Colour(randint(0,RGB_VALUE_LIMIT))
+                    await self.bot.create_role(server, name=object_name, 
+                                               mentionable=True, 
+                                               colour=rand_color)
+
                     await asyncio.sleep(0.05)   # sleep while role is cooking
                     role = discord.utils.get(server.roles, name=object_name)
                     return role  
