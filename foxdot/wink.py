@@ -216,6 +216,8 @@ class Wink:
         TODO: allow urls as well
         TODO: add list option
         TODO: save source url/name
+        TODO: more in-depth controls: delete / add to sample subfolder?
+        TODO: post search result and ask for confirmation
 
         * for use in FoxDot only atm
         """
