@@ -202,7 +202,7 @@ class Wink:
                                  'intro': self.interpreters['tidal']['intro'],
                                  'hush':  self.interpreters['tidal']['hush']}
 
-    def save(self):
+    def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
 
     def cleanup_code(self, content):
@@ -302,7 +302,7 @@ class Wink:
         sample_data['REQUESTER'] = {'NAME_DISCRIM': str(author), 
                                     'ID': author.id}
         self.settings['SAMPLES'][name] = sample_data
-        self.save()
+        self._save()
         await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
     @commands.command(pass_context=True)
@@ -372,7 +372,7 @@ class Wink:
         interpreter = interpreter.upper()
 
         self.settings["INTERPRETER_PATHS"][interpreter] = path
-        self.save()
+        self._save()
         await self.bot.say(interpreter + " path updated to: " + path +
                            "\n`" + ctx.prefix + "reload wink` to take effect.")
 
