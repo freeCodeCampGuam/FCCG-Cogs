@@ -229,6 +229,7 @@ class Wink:
         TODO: save source url/name
         TODO: more in-depth controls: delete / add to sample subfolder?
         TODO: post search result and ask for confirmation
+        TODO: way to sync samples across local clients
 
         * for use in FoxDot only atm
         """
