@@ -240,10 +240,15 @@ class Wink:
         TODO: more in-depth controls: delete / add to sample subfolder?
         TODO: post search result and ask for confirmation
         TODO: way to sync samples across local clients
+        TODO: add duration limit
+        TODO: add permissions for overwriting samples
+        TODO: limit usage to winkers
+        TODO: add sample grab from user upload
+        TODO: add sample remove
+        TODO: assure we don't trample samples due to async when rapid requests come in
 
         * for use in FoxDot only atm
         """
-        # TODO: limit usage to winkers
         author = ctx.message.author
 
         # search is name if None
