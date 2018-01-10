@@ -296,6 +296,12 @@ class Wink:
 
         the name is used as the search parameter if none is given
 
+        WIP please feel free to make PRs :)
+        
+        * for use in FoxDot only atm
+        """
+
+        """
         TODO: allow urls as well
         TODO: add list option
         TODO: save source url/name
@@ -308,8 +314,6 @@ class Wink:
         TODO: add sample grab from user upload
         TODO: add sample remove
         TODO: assure we don't trample samples due to async when rapid requests come in
-
-        * for use in FoxDot only atm
         """
         author = ctx.message.author
         server = ctx.message.server
