@@ -17,6 +17,7 @@ from collections import deque
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 from copy import deepcopy
+from __main__ import send_cmd_help
 
 
 SETTINGS_PATH = "data/foxdot/settings.json"
