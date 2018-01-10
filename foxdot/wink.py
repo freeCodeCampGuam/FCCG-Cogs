@@ -146,8 +146,12 @@ class Wink:
         self.sessions = {}
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
-        if self.settings['INTERPRETER_PATHS']['TROOP'] is not None:
-            sys.path.insert(0, self.settings['INTERPRETER_PATHS']['TROOP'])
+        # load interpreter paths into sys.path
+        paths = self.settings['INTERPRETER_PATHS']
+        for path in paths.values():
+            if path is not None and path not in sys.path:
+                sys.path.insert(0, path)
+        # Troop
         try:
             from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
         except:
