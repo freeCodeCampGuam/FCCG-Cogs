@@ -21,17 +21,6 @@ from cogs.repl import wait_for_first_response
 SETTINGS_PATH = "data/foxdot/settings.json"
 SAMPLE_PATH = 'data/foxdot/samples/'
 
-# TODO: clean this up :3
-settings = dataIO.load_json(SETTINGS_PATH)
-if settings['INTERPRETER_PATHS']['TROOP'] is not None:
-    sys.path.insert(0, settings['INTERPRETER_PATHS']['TROOP'])
-try:
-    from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
-except:
-    FoxDotInterpreter = None
-    TidalInterpreter = None
-    StackTidalInterpreter = None
-
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
 
@@ -52,36 +41,6 @@ youtube_dl_options = {
     'default_search': 'auto',
     'encoding': 'utf-8'
 }
-
-INTERPRETERS = {
-    'foxdot': {'class': FoxDotInterpreter,
-        'intro': [
-            'Welcome!!\nThis is a collaborative window into FoxDot\n'
-            ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
-            ' p2 >> play("(xo){[--]-}")\n'
-            'execute a reset() or cls() to reposition your terminal\n'
-            'execute a . to stop all sound\n'
-            '[p]foxdot for more on FoxDot!\n'
-            'close this console to reposition it also\n' + '-' * 51 + '\n'
-        ],
-        'hush': 'Clock.clear()'
-    },
-    'tidal': {'class': TidalInterpreter,
-        'intro': [
-            'Welcome!!\nThis is a collaborative window into TidalCycles\n'
-            ' I have no idea how to use Tidal!\n'
-            ' eeeuhhhhhh tidal example\n'
-            'execute a `reset` or `cls` to reposition your terminal\n'
-            'execute a `.` to stop all sound\n'
-            '[p]tidal for more on TidalCycles!\n'
-            'close this console to reposition it also\n' + '-' * 51 + '\n'
-        ],
-        'hush': 'hush'
-    }
-}
-INTERPRETERS['stack'] = {'class': StackTidalInterpreter,
-                         'intro': INTERPRETERS['tidal']['intro'],
-                         'hush':  INTERPRETERS['tidal']['hush']}
 
 
 # TODO: rewrite that whole pager nonsense
@@ -187,6 +146,44 @@ class Wink:
         self.sessions = {}
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
+        if self.settings['INTERPRETER_PATHS']['TROOP'] is not None:
+            sys.path.insert(0, self.settings['INTERPRETER_PATHS']['TROOP'])
+        try:
+            from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
+        except:
+            FoxDotInterpreter = None
+            TidalInterpreter = None
+            StackTidalInterpreter = None
+
+        self.interpreters = {
+            'foxdot': {'class': FoxDotInterpreter,
+                'intro': [
+                    'Welcome!!\nThis is a collaborative window into FoxDot\n'
+                    ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
+                    ' p2 >> play("(xo){[--]-}")\n'
+                    'execute a reset() or cls() to reposition your terminal\n'
+                    'execute a . to stop all sound\n'
+                    '[p]foxdot for more on FoxDot!\n'
+                    'close this console to reposition it also\n' + '-' * 51 + '\n'
+                ],
+                'hush': 'Clock.clear()'
+            },
+            'tidal': {'class': TidalInterpreter,
+                'intro': [
+                    'Welcome!!\nThis is a collaborative window into TidalCycles\n'
+                    ' I have no idea how to use Tidal!\n'
+                    ' eeeuhhhhhh tidal example\n'
+                    'execute a `reset` or `cls` to reposition your terminal\n'
+                    'execute a `.` to stop all sound\n'
+                    '[p]tidal for more on TidalCycles!\n'
+                    'close this console to reposition it also\n' + '-' * 51 + '\n'
+                ],
+                'hush': 'hush'
+            }
+        }
+        self.interpreters['stack'] = {'class': StackTidalInterpreter,
+                                 'intro': self.interpreters['tidal']['intro'],
+                                 'hush':  self.interpreters['tidal']['hush']}
 
     def save():
         dataIO.save_json(SETTINGS_PATH, self.settings)
@@ -445,9 +442,9 @@ class Wink:
 
         kind = kind.lower()
         try:
-            Interpreter = INTERPRETERS[kind]['class']
-            intro = INTERPRETERS[kind]['intro'].copy()
-            hush = INTERPRETERS[kind]['hush']
+            Interpreter = self.interpreters[kind]['class']
+            intro = self.interpreters[kind]['intro'].copy()
+            hush = self.interpreters[kind]['hush']
         except KeyError:
             await self.bot.say('Only FoxDot and Tidal interpreters available '
                                '(use `stack` if you use stack for your Tidal)')
