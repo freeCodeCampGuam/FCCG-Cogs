@@ -186,10 +186,14 @@ class RoleCall:
         if role_channel_name is not None:
             everyone = discord.PermissionOverwrite(read_messages=False)
             new_role = discord.PermissionOverwrite(read_messages=True)
-            await self.bot.create_channel(server, role_channel_name, 
-                                          (server.default_role, everyone), 
-                                          (role_obj,new_role))
-        
+            try:
+                await self.bot.create_channel(server, role_channel_name, 
+                                              (server.default_role, everyone), 
+                                              (role_obj,new_role))
+            except Exception as e:
+                err_msg = 'Invalid role_channel_name specified'
+                await self.bot.send_message(role_board, err_msg)
+                return
         # check if message ID was provided. If yes, post the new role to the 
         # message associated with the ID, if not, post the new entry to the 
         # chosen role board
