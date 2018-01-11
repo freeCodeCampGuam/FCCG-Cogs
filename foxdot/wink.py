@@ -48,7 +48,7 @@ youtube_dl_options = {
 DEFAULT_SAMPLE = {
     'SOURCE': 'unknown source',
     'REQUESTER': {
-        'NAME_DISCRIM': 'unknown person', 
+        'NAME_DISCRIM': 'unknown person',
         'ID': None
     }
 }
