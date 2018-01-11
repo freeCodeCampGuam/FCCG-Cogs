@@ -14,6 +14,7 @@ import threading
 import os
 from glob import glob
 from collections import deque
+from urllib.parse import urlparse
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 from copy import deepcopy
@@ -159,6 +160,38 @@ class Downloader(threading.Thread):
             self.song = Song(**video)
 
 
+# Also ripped from Audio :3
+def match_any_url(url):
+    url = urlparse(url)
+    if url.scheme and url.netloc and url.path:
+        return True
+    return False
+
+def match_sc_url(url):
+    sc_url = re.compile(
+        r'^(https?\:\/\/)?(www\.)?(soundcloud\.com\/)')
+    if sc_url.match(url):
+        return True
+    return False
+
+def match_yt_url(url):
+    yt_link = re.compile(
+        r'^(https?\:\/\/)?(www\.|m\.)?(youtube\.com|youtu\.?be)\/.+$')
+    if yt_link.match(url):
+        return True
+    return False
+
+# Checking only yt/sc now since someone could pull the IP by 
+# pointing the bot to their own server
+# TODO: add a toggle_any_url or whitelist regex/basepath w/ warning
+def valid_playable_url(url):
+    yt = match_yt_url(url)
+    sc = match_sc_url(url)
+    if yt or sc:  # TODO: Add sc check
+        return True
+    return False
+
+
 class ReactionRemoveEvent(asyncio.Event):
     def __init__(self, emojis, author, check=None):
         super().__init__()
@@ -291,6 +324,21 @@ class Jamcord:
 
         return member
 
+    def parse_search_or_url(url_or_search_term):
+        """returns stripped url if it is valid (yt/sc) 
+        otherwise returns false if url is given but invalid
+        otherwise returns [SEARCH:] prepended search terms"""
+        url = url_or_search_term.strip("<>")
+
+        if match_any_url(url):
+            if not valid_playable_url(url):
+                return False
+        else:
+            url = url.replace("/", "&#47")
+            url = "[SEARCH:]" + url
+
+        return url
+
     @commands.group(pass_context=True, no_pm=True)
     async def sample(self, ctx):
         """additional samples management"""
@@ -358,19 +406,25 @@ class Jamcord:
         path = SAMPLE_PATH + name + '.wav'
         sample_exists = os.path.exists(path)
 
-        # resolve url
+        # prepare url
+        search = self.parse_search_or_url(search)
+
+        if not search: # not yt/sc (later add whitelisting/toggle)
+            return await self.bot.say("That is not a valid url")
+
         # see if we've resolved before
         # and values in case they rename samples I guess
         if (search in self.previous_sample_searches or
                 search in self.previous_sample_searches.values()):
             search = self.previous_sample_searches.get(search, search)
 
+        # resolve url
         m = None
-        if not search.startswith('http'):
+        if search.startswith('[SEARCH:]'):
             s = ('Sample name exists! One sec, grabbing link..'
                  if sample_exists else '🔎..')
             m = await self.bot.say(s)
-            d = await self._download_sample('[SEARCH:]' + search, options, False)
+            d = await self._download_sample(search, options, False)
             self.previous_sample_searches[search] = d.url
             search = d.url
 
