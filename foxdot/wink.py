@@ -608,28 +608,32 @@ class Jamcord:
         await self.bot.say('will clean new messages after {} seconds')
 
     @checks.is_owner()
-    @commands.command(pass_context=True)
-    async def addwink(self, ctx, member: discord.Member):
-        """addwink"""
+    @jam.command(pass_context=True, name="invite", no_pm=True)
+    async def jam_invite(self, ctx, member: discord.Member):
+        """Invite someone into your jam session
+
+        Note, this lets people run arbitrary code on the computer your bot is on.
+        Either make sure there's nothing to lose by putting your bot on a throwaway
+        VPS running only this cog, or only invite people you REALLY trust."""
         channel = ctx.message.channel
         author = ctx.message.author
 
         if channel.id not in self.sessions:
-            return await self.bot.say('no winking is taking place in this channel')
+            return await self.bot.say('no jam session is on in this channel')
 
-        await self.bot.say('stranger danger! you sure you wanna let '
-                           '{} wink? (yes/no)'.format(member.display_name), 
+        await self.bot.say('Stranger danger! This is seriously dangerous. '
+                           'Read `{}help jam invite` for info on why. '
+                           '\nYou sure you wanna let {} jam? (yes/no)'
+                           ''.format(ctx.prefix, member.display_name),
                            delete_after=15)
         answer = await self.bot.wait_for_message(timeout=15, author=author)
         if not answer.content.lower().startswith('y'):
-            return await self.bot.say('yeah get away from us 😠', delete_after=5)
+            return await self.bot.say('Yeah get away from us 😠', delete_after=5)
 
         if await self.wait_for_interpreter(channel, self.sessions[channel.id],
                                            member):
-            await self.bot.say('{} can now wink. man his eyes musta been dry '
-                               'as hell'.format(member.display_name),
-                               delete_after=10)
-
+            await self.bot.say('{} has been added to the jam session!'
+                               ''.format(member.display_name), delete_after=10)
 
     @checks.is_owner()
     @commands.command(pass_context=True)
