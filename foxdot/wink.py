@@ -911,7 +911,7 @@ class Jamcord:
         if stale_session['console']:
             ids.append(stale_session['console'].id)
 
-        # msg is a wink msg
+        # msg is a jam msg
         if message.id in ids:
             return
 
