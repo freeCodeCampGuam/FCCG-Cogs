@@ -636,21 +636,21 @@ class Jamcord:
                                ''.format(member.display_name), delete_after=10)
 
     @checks.is_owner()
-    @commands.command(pass_context=True)
-    async def delwink(self, ctx, member: discord.Member):
-        """delwink"""
+    @jam.command(pass_context=True, name="kick", no_pm=True)
+    async def jam_kick(self, ctx, member: discord.Member):
+        """Kick someone from the jam session"""
         channel = ctx.message.channel
         if channel.id not in self.sessions:
-            return await self.bot.say('no winking is taking place in this channel')
+            return await self.bot.say('There is no jam session on in this channel')
 
         try:
             del self.sessions[channel.id]['authors'][member.id]
         except KeyError:
-            return await self.bot.say("{} already can't wink!"
+            return await self.bot.say("{} isn't in the jam session"
                                       "".format(member.display_name))
-        await self.bot.say("bad man {}! you're not allowed to wink "
-                           "anymore!".format(member.display_name))
-
+        await self.bot.say("{} has been kicked from the jam session"
+                           "".format(member.display_name))
+    
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
     async def unwink(self, ctx):
