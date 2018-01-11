@@ -217,7 +217,7 @@ class Jamcord:
                     ' p2 >> play("(xo){[--]-}")\n'
                     'execute a reset() or cls() to reposition your terminal\n'
                     'execute a . to stop all sound\n'
-                    '[p]foxdot for more on FoxDot!\n'
+                    '[p]jam help foxdot for more on FoxDot!\n'
                     'close this console to reposition it also\n' + '-' * 51 + '\n'
                 ],
                 'hush': 'Clock.clear()',
@@ -233,7 +233,7 @@ class Jamcord:
                     ' eeeuhhhhhh tidal example\n'
                     'execute a `reset` or `cls` to reposition your terminal\n'
                     'execute a `.` to stop all sound\n'
-                    '[p]tidal for more on TidalCycles!\n'
+                    '[p]jam help tidal for more on TidalCycles!\n'
                     'close this console to reposition it also\n' + '-' * 51 + '\n'
                 ],
                 'hush': 'hush',
@@ -408,7 +408,61 @@ class Jamcord:
         self._save()
         await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
-    @commands.command(pass_context=True)
+    # adjust later. I want a server-mode fork where anybody can start one
+    @checks.is_owner()
+    @commands.group(pass_context=True, no_pm=True)
+    async def jam(self, ctx):
+        """all your jamming needs"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+    
+    @jam.group(pass_context=True, name='help', aliases=['tutorial'],
+               invoke_without_command=True)
+    async def jam_tutorial(self, ctx):
+        """Not sure what this all is or how to start? Here's some info 👍"""
+        # TODO: move this allllllll to a Wiki
+
+        s = ("The General Usage of this cog goes like this:\n\n"
+             "`{0}jam on` starts a default jam session (type `{0}help jam on` for more info)\n"
+             "Once started, you'll be prompted to enter a `code` msg or ```code block```"
+             "That will be your terminal. Keep editing that message to change what will be sent, "
+             "and click on the ☑ to execute it!\n\n"
+             "Executing a `quit` or `exit` will close the session at any time.\n"
+             "You can also move your terminal to the bottom of the channel by executing "
+             "`cls`, `reset`, or `refresh`,\nalthough if you need to do this often, you probably "
+             "want to turn on `{0}jam clean` instead.\n"
+             "Like the terminals, you can reset the bot's console by pressing the ❌\n"
+             "It will reappear when you send the next block of code.\n\n"
+             "Ready to invite people into your jam? Just use `{0}jam invite`, but be very "
+             "careful with who you invite.\nYou are giving them permission to execute arbitrary "
+             "code on your bot's computer, meaning they can read and destroy pretty much everything.\n"
+             "If you want to share the risk, or would just like some better quality audio for "
+             "everyone jamming, you can get your jam buddies to install this cog as well and join your "
+             "session with their consoles off (`{0}help jam on` for more info). \n"
+             "Everyone will have to `reset` their terminals so that the bots have their terminals in sync.\n\n"
+             "If you're not sure how to send a code block, check out this link: "
+             "https://support.discordapp.com/hc/en-us/articles/210298617\n\n"
+             "If you want to use Syntax Highlighting these combos will probably help most\n"
+             "**FoxDot**: `py`\n**Tidal**: `haskell`\n**Extempore**: `scheme`\n\n"
+             "")
+        await self.bot.say(s.format(ctx.prefix))
+        await send_cmd_help(ctx)
+
+    @jam_tutorial.command(pass_context=True, name="livecoding")
+    async def info_livecoding(self, ctx):
+        """What's LiveCoding?"""
+        s = ("LiveCoding is a performance art where musicians/participants\n"
+             "write software that generates the music live while the music is playing.\n"
+             "Here's an example: https://youtu.be/smQOiFt8e4Q\n\n"
+             "LiveCoding isn't constrained to only music but it is the most common.\n"
+             "Home of LiveCoding: https://toplap.org/\n"
+             "They have a Slack too!: http://toplap.org/toplap-on-slack/\n\n"
+             "Soon we'll get live coding visuals into Discord too! \o/\n"
+             "If you're interested in helping dev that, join the LiveCoding discord "
+             "server linked in `{0}help Jamcord` and let me(irdumb) know!\n\n")
+        await self.bot.say(s.format(ctx.prefix))
+
+    @jam_tutorial.command(pass_context=True)
     async def foxdot(self, ctx):
         """info about the FoxDot environment"""
         s = ("This is **FoxDot** <http://foxdot.org/>\n"
@@ -439,7 +493,7 @@ class Jamcord:
              "```")
         await self.bot.say(s)
 
-    @commands.command(pass_context=True)
+    @jam_tutorial.command(pass_context=True)
     async def tidal(self, ctx):
         """info about the TidalCycles environment"""
         s = ("This is **TidalCycles** <https://tidalcycles.org/>\n"
