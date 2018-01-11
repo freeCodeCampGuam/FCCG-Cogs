@@ -17,6 +17,7 @@ from collections import deque
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 from copy import deepcopy
+from random import choice
 from __main__ import send_cmd_help
 
 
@@ -652,16 +653,19 @@ class Jamcord:
                            "".format(member.display_name))
     
     @checks.is_owner()
-    @commands.command(pass_context=True, no_pm=True)
-    async def unwink(self, ctx):
-        """wake up"""
+    @jam.command(pass_context=True, name="off", no_pm=True)
+    async def jam_off(self, ctx):
+        """close the jam session in the current channel"""
         channel = ctx.message.channel
 
         try:
             self.kill(channel)
         except KeyError:
-            return await self.bot.say("there's no wink session in this channel")
-        await self.bot.say('open your eyes')
+            return await self.bot.say("there's no jam session in this channel")
+
+        bye = choice(['jam over', 'jam session over', 
+                      "that's a wrap", 'jam session closed'])
+        await self.bot.say(bye)
 
     def kill(self, channel):
         self.sessions[channel.id]['repl'].kill()
