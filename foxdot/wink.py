@@ -691,10 +691,13 @@ class Jamcord:
         if cleaning is on, message starting with * aren't deleted
 
         available environments: FoxDot, Tidal, Stack (stack install of Tidal)
+
+        NOTE: atm the bot doesn't send audio or start up SuperCollider ...
+        You'll need to redirect the audio to discord yourself (or have 2 clients connecting)
+        and you'll need to start up SuperCollider beforehand by hand
         """
         channel = ctx.message.channel
         author = ctx.message.author
-        server = ctx.message.server
 
         kind = kind.lower()
         try:
@@ -777,8 +780,7 @@ class Jamcord:
             cleaned = self.cleanup_code(response.content)
 
             if cleaned in ('quit', 'exit', 'exit()'):
-                self.kill(channel)
-                await self.bot.say('open your eyes')
+                await ctx.invoke(self.jam_off)
                 break
 
             # refresh user's interpreter
