@@ -859,7 +859,9 @@ class Jamcord:
 
 
     async def wait_for_interpreter(self, channel, session, member):
-        fmt = '{} post a `code` message or a ```code-block``` to start your session'
+        fmt = ('{}, to start your session, post a `code` message or a ```code-block```'
+               'This message will serve as your terminal window into the LiveCoding env.\n'
+               '**Edit** the message and **press the ☑** to send it to the env (execute it).')
         prompt = await self.bot.send_message(channel,
                                              fmt.format(member.mention))
         def check(m):
