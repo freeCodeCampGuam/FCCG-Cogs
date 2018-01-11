@@ -20,8 +20,8 @@ from copy import deepcopy
 from __main__ import send_cmd_help
 
 
-SETTINGS_PATH = "data/foxdot/settings.json"
-SAMPLE_PATH = 'data/foxdot/samples/'
+SETTINGS_PATH = "data/jamcord/settings.json"
+SAMPLE_PATH = 'data/jamcord/samples/'
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
@@ -171,8 +171,21 @@ class ReactionRemoveEvent(asyncio.Event):
         return super().set()
 
 
-class Wink:
-    """wink"""
+class Jamcord:
+    """Jamcord - A collaborative window your favorite LiveCoding environments.
+
+    This cog, while still in alpha, lets you write music live in Discord by yourself
+    or with any number of your buddies!
+
+    Atm this cog requires you to install and set up your environment on your own.
+    Once it's set up, nobody else jamming w/ you will need to install anything 
+    or even know about LiveCoding!
+
+    To see what you need to do, use [p]jam setup
+
+    Have any questions, want to jam, or want to help with development?
+    Come join us on the LiveCoding Discord! https://discord.gg/49XSK94
+    """
 
     def __init__(self, bot):
         self.bot = bot
@@ -327,7 +340,7 @@ class Wink:
         TODO: way to sync samples across local clients
         TODO: add duration limit
         TODO: add permissions for overwriting samples
-        TODO: limit usage to winkers
+        TODO: limit usage to jammers
         TODO: add sample grab from user upload
         TODO: add sample remove
         TODO: assure we don't trample samples due to async when rapid requests come in
