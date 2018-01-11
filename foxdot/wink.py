@@ -679,13 +679,13 @@ class Jamcord:
         self.sessions[channel.id]['active'] = False
         self.sessions[channel.id]['click_wait'].cancel()
 
-    @checks.is_owner()
-    @commands.command(pass_context=True, no_pm=True)
-    async def wink(self, ctx, kind: str='FoxDot', console: bool=True, clean: int=-1):
+    @jam.command(pass_context=True, no_pm=True, name="on")
+    async def jam_on(self, ctx, kind: str='FoxDot', 
+                        console: bool=True, clean: int=-1):
         """start up a collab LiveCoding session
-        set the console off if you're joining someone else's wink
+        set the console off if you're joining someone else's jam
 
-        clean is how long to wait before deleting non-wink msgs
+        clean is how long to wait before deleting non-jam msgs
         if clean is negative, msgs are not deleted
 
         if cleaning is on, message starting with * aren't deleted
@@ -706,7 +706,7 @@ class Jamcord:
 
         if Interpreter is None:
             await self.bot.say("Troop hasn't been installed or the path hasn't "
-                               "been setup yet. Use `{}winkset path troop "
+                               "been setup yet. Use `{}jamset path troop "
                                "<path>` to add it.".format(ctx.prefix))
             return
 
@@ -715,7 +715,7 @@ class Jamcord:
         preloads = self.interpreters[kind]['preloads']
 
         if channel.id in self.sessions:
-            await self.bot.say("Already running a wink session in this channel")
+            await self.bot.say("Already running a jam session in this channel")
             return
 
         self.sessions[channel.id] = {
@@ -772,7 +772,7 @@ class Jamcord:
             if not response:
                 continue
 
-            winker = response.author
+            jammer = response.author
 
             cleaned = self.cleanup_code(response.content)
 
@@ -783,7 +783,7 @@ class Jamcord:
 
             # refresh user's interpreter
             if cleaned in ('refresh', 'refresh()', 'cls', 'cls()', 'reset', 'reset()'):
-                task = self.wait_for_interpreter(channel, session, winker)
+                task = self.wait_for_interpreter(channel, session, jammer)
                 self.bot.loop.create_task(task)
                 continue
 
@@ -804,7 +804,7 @@ class Jamcord:
                 value = stdout.getvalue()
                 if value:
                     try:
-                        value = re.sub(USER_SPOT, winker.display_name, value)
+                        value = re.sub(USER_SPOT, jammer.display_name, value)
                     except AttributeError:
                         pass
                 if result is not None:
@@ -813,7 +813,7 @@ class Jamcord:
                     fmt = '{}'.format(value)
                 else:
                     clean_lines = cleaned.split('\n')
-                    with_author = ['{}: {}'.format(winker.display_name, ln) 
+                    with_author = ['{}: {}'.format(jammer.display_name, ln) 
                                    for ln in clean_lines]
                     fmt = '\n'.join(with_author)
             if fmt is None:
