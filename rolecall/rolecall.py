@@ -162,7 +162,14 @@ class RoleCall:
                             role_emoji: discord.Emoji, 
                             role_channel_name: str = None,
                             ):
-        """Add an entry to a roleboard. If a message ID is provided, post a role to the existing message/entry"""
+        """
+        Add an entry to a roleboard. If a message ID is provided, 
+        post a role to the existing message/entry.
+            
+        Optional role_channel_name will be the name of a private
+        channel that will be created for the members who hold the role. 
+        Specified name must be of a non-existing channel.
+        """
         server = ctx.message.server
         author = ctx.message.author
 
