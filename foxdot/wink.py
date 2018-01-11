@@ -415,6 +415,25 @@ class Jamcord:
         """all your jamming needs"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
+
+    @jam.command(pass_context=True, name="setup", no_pm=True)
+    async def jam_setup(self, ctx):
+        """since this cog is in alpha, you'll need to setup some things first
+
+        You'll need:
+        1. Interpreter(s): FoxDot+SC3 Plugins(most supported) / TidalCycles / Extempore(soon)
+        2. Troop(soon won't be needed) [https://github.com/Qirky/Troop]
+        3. SuperCollider (you will need to make sure this is running w/ FoxDot or Tidal servers on)
+        4. A way to redirect audio-out back into audio-in (SoundFlower works on Mac)
+        5. Set Troop's path w/ [p]jamset path troop
+        """
+        s = ("You'll need:\n"
+             "1. Interpreter(s): FoxDot+SC3 Plugins(most supported) / TidalCycles / Extempore(soon)\n"
+             "2. Troop(soon won't be needed) [https://github.com/Qirky/Troop]\n"
+             "3. SuperCollider (you will need to make sure this is running w/ FoxDot or Tidal servers on)\n"
+             "4. A way to redirect audio-out back into audio-in (SoundFlower works on Mac)"
+             "5. Set Troop's path w/ `{}jamset path troop`")
+        await self.bot.say(s.format(ctx.prefix))
     
     @jam.group(pass_context=True, name='help', aliases=['tutorial'],
                invoke_without_command=True)
