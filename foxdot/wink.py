@@ -589,10 +589,11 @@ class Jamcord:
         await self.bot.say(s)
 
     @checks.is_owner()
-    @commands.command(pass_context=True, no_pm=True)
-    async def cleanwink(self, ctx, seconds: int=None):
-        """how long to wait before cleaning up non-wink msgs in the wink channel
-
+    @jam.command(pass_context=True, name="clean", no_pm=True)
+    async def jam_clean(self, ctx, seconds: int=None):
+        """how long to wait before cleaning up non-jam msgs in the jam channel
+        
+        only effects on-going jam sessions
         leave blank to toggle between not cleaning and 25 seconds"""
         channel = ctx.message.channel
         try:
@@ -601,7 +602,7 @@ class Jamcord:
                 seconds = -1 if seconds > 0 else 25
             self.sessions[channel.id]['clean_after'] = seconds
         except KeyError:
-            return await self.bot.say('There is no wink session in this channel')
+            return await self.bot.say('There is no jam session in this channel')
         if seconds == -1:
             return await self.bot.say('will not clean new messages')
         await self.bot.say('will clean new messages after {} seconds')
