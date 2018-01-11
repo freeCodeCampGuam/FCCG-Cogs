@@ -1,0 +1,10 @@
+{
+	"NAME" : "Jamcord",
+	"AUTHOR" : "irdumb",
+	"SHORT" : "Collab LiveCoding - Code music w/ peeps",
+	"DESCRIPTION" : "[NOTE. This is in ALPHA and currently requires additional setup]\n\nBringing LiveCoding to the masses.\nGives you and whomever you want to jam with a LiveCoding terminal w/ your interpreter of choice.\nSupports FoxDot, TidalCycles, and Extempore (soon). Also supports sample downloading anything that the Audio cog can play.",
+    "INSTALL_MSG" : "Welcome to the world of LiveCoding! Seems like you've decided to get this cog yourself. That's awesome!\nWhat's not so awesome though is that this cog is still in Alpha so you'll need to do some things before you can jam w/ peeps. You'll need...\n\n1. Interpreter(s): FoxDot/TidalCycles\n2. Troop (https://github.com/Qirky/Troop)\n3. SuperCollider which you'll need to make sure is on before starting a session\n4. a way to redirect your audio output back into input (SoundFlower works on Mac)\n\nHave fun!\nif you have questions or would like to help contribute to this cog, come on over to the LiveCoding Discord https://discord.gg/49XSK94 and let me(irdumb) know!",
+    "REQUIREMENTS" : [],
+    "TAGS" : ["music", "livecoding", "audio", "collaboration", "creative"],
+    "DISABLED" : false
+}
