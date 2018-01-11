@@ -81,6 +81,23 @@ SUPPORTED_SAMPLE_EXTS = ('.wav',)
 _reaction_remove_events = set()
 
 
+# TODO
+class Interpreter():
+    """Replace Troop w/ a general purpose cmd line 
+    livecoding env communication thingamajig.
+
+    add subclasses for specifics needed. 
+    maybe move all that self.interpreter stuff into those
+    """
+    NotImplemented
+
+
+# TODO
+class AudioStream():
+    """Stream Jam Audio from the bot to Discord"""
+    NotImplemented
+
+
 # ripped from audio.py
 class Song:
     def __init__(self, **kwargs):
