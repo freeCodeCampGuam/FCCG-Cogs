@@ -408,6 +408,67 @@ class Jamcord:
         self._save()
         await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
+    @commands.group(pass_context=True)
+    async def jamset(self, ctx):
+        """settings for jams"""
+        if ctx.invoked_subcommand is None:
+            await send_cmd_help(ctx)
+    
+    @jamset.command(pass_context=True, name="path")
+    async def jamset_path(self, ctx, interpreter, *, path):
+        """set the path(s) to your interpreter(s)"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+        supported = ("troop",)
+        if interpreter.lower() not in supported:
+            await self.bot.say('Only these interpreters are supported atm:\n'
+                               '{}'.format(' '.join(supported)))
+            return NotImplemented
+
+        interpreter = interpreter.upper()
+
+        self.settings["INTERPRETER_PATHS"][interpreter] = path
+        self._save()
+        await self.bot.say(interpreter + " path updated to: " + path +
+                           "\n`" + ctx.prefix + "reload jamcord` to take effect.")
+
+    async def start_console(self, ctx, session):
+        server = ctx.message.server
+        task = interactive_results(self.bot, ctx, session['pages'],
+                                   timeout=None, authors=server.members)
+        await asyncio.sleep(0.1)
+        task = self.bot.loop.create_task(task)
+        await asyncio.sleep(0.1)
+        answer = await self.bot.wait_for_message(timeout=15, author=server.me,
+                                                 check=lambda m: m.content.startswith(NBS))
+        session['console'] = answer
+        return task
+
+    async def replace_pages(self, session):
+        for i in range(len(session['pages'])):
+            if i > 0:
+                session['pages'].pop()
+        if session['pages']:
+            page = self.pager(session)()
+            session['pages'][0] = page
+            return page
+
+    def pager(self, session):
+        async def page():
+            discord_fmt = NBS + '```py\n{}\n```{}/{}'
+            output = '\n'.join([s.strip() for s in session['output']])
+            pages = [p for p in line_pagify(output, page_length=1400)]
+            res = pages[session['page_num']]
+            session['page_num'] -= 1
+            session['page_num'] %= len(pages)
+            # dirty semi-insurance
+            session['pages'].append(page())
+            self.bot.loop.create_task(self.replace_pages(session))
+            return discord_fmt.format(res.strip(), session['page_num'] + 1,
+                                      len(pages))
+        return page
+
     # adjust later. I want a server-mode fork where anybody can start one
     @checks.is_owner()
     @commands.group(pass_context=True, no_pm=True)
@@ -527,32 +588,6 @@ class Jamcord:
              "```\n")
         await self.bot.say(s)
 
-    @commands.group(pass_context=True)
-    async def winkset(self, ctx):
-        """settings for wink"""
-        if ctx.invoked_subcommand is None:
-            await send_cmd_help(ctx)
-    
-    @winkset.command(pass_context=True, name="path")
-    async def winkset_path(self, ctx, interpreter, *, path):
-        """set the path(s) to your interpreter(s)"""
-        server = ctx.message.server
-        channel = ctx.message.channel
-        author = ctx.message.author
-        supported = ("troop",)
-        if interpreter.lower() not in supported:
-            await self.bot.say('Only these interpreters are supported atm:\n'
-                               '{}'.format(' '.join(supported)))
-            return NotImplemented
-
-        interpreter = interpreter.upper()
-
-        self.settings["INTERPRETER_PATHS"][interpreter] = path
-        self._save()
-        await self.bot.say(interpreter + " path updated to: " + path +
-                           "\n`" + ctx.prefix + "reload wink` to take effect.")
-
-
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
     async def cleanwink(self, ctx, seconds: int=None):
@@ -634,42 +669,6 @@ class Jamcord:
             self.bot.loop.create_task(try_delete(self.bot, console))
         self.sessions[channel.id]['active'] = False
         self.sessions[channel.id]['click_wait'].cancel()
-
-    async def start_console(self, ctx, session):
-        server = ctx.message.server
-        task = interactive_results(self.bot, ctx, session['pages'],
-                                   timeout=None, authors=server.members)
-        await asyncio.sleep(0.1)
-        task = self.bot.loop.create_task(task)
-        await asyncio.sleep(0.1)
-        answer = await self.bot.wait_for_message(timeout=15, author=server.me,
-                                                 check=lambda m: m.content.startswith(NBS))
-        session['console'] = answer
-        return task
-
-    async def replace_pages(self, session):
-        for i in range(len(session['pages'])):
-            if i > 0:
-                session['pages'].pop()
-        if session['pages']:
-            page = self.pager(session)()
-            session['pages'][0] = page
-            return page
-
-    def pager(self, session):
-        async def page():
-            discord_fmt = NBS + '```py\n{}\n```{}/{}'
-            output = '\n'.join([s.strip() for s in session['output']])
-            pages = [p for p in line_pagify(output, page_length=1400)]
-            res = pages[session['page_num']]
-            session['page_num'] -= 1
-            session['page_num'] %= len(pages)
-            # dirty semi-insurance
-            session['pages'].append(page())
-            self.bot.loop.create_task(self.replace_pages(session))
-            return discord_fmt.format(res.strip(), session['page_num'] + 1,
-                                      len(pages))
-        return page
 
     @checks.is_owner()
     @commands.command(pass_context=True, no_pm=True)
