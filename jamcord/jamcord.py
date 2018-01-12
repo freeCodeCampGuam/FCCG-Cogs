@@ -20,6 +20,10 @@ from cogs.repl import wait_for_first_response
 from copy import deepcopy
 from random import choice
 from __main__ import send_cmd_help
+try:
+    import pyaudio
+except:
+    pyaudio = None
 
 
 SETTINGS_PATH = "data/jamcord/settings.json"
@@ -98,6 +102,19 @@ class Interpreter():
 class AudioStream():
     """Stream Jam Audio from the bot to Discord"""
     NotImplemented
+
+
+class SmallerStream:
+    """temporary solution to pyaudio quadrupling samples returned"""
+    def __init__(self, stream):
+        self.stream = stream
+
+    def read(self, frame_size):
+        return self.stream.read(int(frame_size/4))
+
+    def stop(self):
+        self.stream.stop_stream()
+        self.stream.close()
 
 
 # ripped from audio.py
@@ -533,6 +550,80 @@ class Jamcord:
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
 
+    @jam.command(pass_context=True, name="bot", no_pm=True)
+    async def jam_bot(self, ctx):
+        """[EXPERIMENTAL] Have the bot send your default audio input to Discord
+        This is only useful if you use Jack or SoundFlower to redirect your out to in
+
+        You must be in a voice channel to start this (so the bot knows where to go 👀) 
+        Do [p]jam bot again to stop
+
+        This command will attempt to pip install pyaudio if you don't have it.
+        pyaudio requires portaudio to install: http://www.portaudio.com/
+        You can install it with:
+        On Mac: brew install portaudio
+        On Linux: sudo apt install python3-pyaudio
+
+        Please submit a PR if you can figure out how to get it to send default
+        output directly :P
+
+        This will probably be replaced with an audio stream beinf served through a web server"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+
+        if pyaudio is None:
+            await self.bot.say("Wasn't able to import `pyaudio`. Try to `pip install` it? (y/n)")
+            answer = await self.bot.wait_for_message(timeout=30, author=author)
+            if answer.content.lower() in ('y', 'yes'):
+                m = await self.bot.say("Installing..")
+                success = self.bot.pip_install('pyaudio')
+                if not success:
+                    await self.bot.say("I wasn't able to install `pyaudio`. Please make sure you "
+                                       "have `portaudio` installed: http://www.portaudio.com/"
+                                       "\n**MAC**: `brew install portaudio`"
+                                       "\n**LINUX**: `sudo apt install python3-pyaudio`")
+                    return
+                await self.bot.edit_message(m, new_content='Installed!')
+            else:
+                await self.bot.say("Alright, I won't install it.")
+                return
+            
+
+        if channel.id not in self.sessions:
+            await self.bot.say('There is no jam session in this channel.')
+            return
+
+        if author.voice_channel is None:
+            await self.bot.say("Please join a voice channel first so "
+                               "I know where to go")
+            return
+
+        try:
+            vc = await self.bot.join_voice_channel(author.voice_channel)
+        except discord.ClientException:
+            await self.bot.say('Disconnecting from voice.')
+            if self.sessions[channel.id]['voice_client']:
+                self.sessions[channel.id]['voice_client'].audio_player.stop()
+            self.sessions[channel.id]['voice_client'] = None
+            return
+
+        await asyncio.sleep(1)  # bot some time to settle after joining
+
+        p = pyaudio.PyAudio()
+        audio_in = p.get_default_input_device_info()
+        stream = p.open(format=p.get_format_from_width(2),
+                        channels=int(audio_in['maxInputChannels']),
+                        rate=int(audio_in['defaultSampleRate']),
+                        input=True,
+                        # allow audio device choice later if needed
+                        input_device_index=audio_in['index'])
+        stream = SmallerStream(stream)
+        vc.audio_player = vc.create_stream_player(stream, after=stream.stop)
+        self.sessions[channel.id]['voice_client'] = vc
+        vc.audio_player.start()
+
+
     @jam.command(pass_context=True, name="setup", no_pm=True)
     async def jam_setup(self, ctx):
         """since this cog is in alpha, you'll need to setup some things first
@@ -790,7 +881,8 @@ class Jamcord:
             'update_console': False,
             'clean_after': clean,
             'interpreter': Interpreter,
-            'hush': hush
+            'hush': hush,
+            'voice_client': None
         }
 
         session = self.sessions[channel.id]
