@@ -274,9 +274,10 @@ class Jamcord:
                 'preloads': []
             }
         }
-        interpreters['stack'] = {'class': StackTidalInterpreter,
-                                 'intro': interpreters['tidal']['intro'],
-                                 'hush' : interpreters['tidal']['hush']}
+        interpreters['stack'] = {'class'   : StackTidalInterpreter,
+                                 'intro'   : interpreters['tidal']['intro'],
+                                 'hush'    : interpreters['tidal']['hush'],
+                                 'preloads': interpreters['tidal']['preloads']}
         return interpreters
 
     def _save(self):
