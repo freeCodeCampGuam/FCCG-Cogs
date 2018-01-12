@@ -325,7 +325,7 @@ class Jamcord:
 
         return member
 
-    def parse_search_or_url(url_or_search_term):
+    def parse_search_or_url(self, url_or_search_term):
         """returns stripped url if it is valid (yt/sc) 
         otherwise returns false if url is given but invalid
         otherwise returns [SEARCH:] prepended search terms"""
