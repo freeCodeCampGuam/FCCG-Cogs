@@ -14,11 +14,16 @@ import threading
 import os
 from glob import glob
 from collections import deque
+from urllib.parse import urlparse
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
 from copy import deepcopy
 from random import choice
 from __main__ import send_cmd_help
+try:
+    import pyaudio
+except:
+    pyaudio = None
 
 
 SETTINGS_PATH = "data/jamcord/settings.json"
@@ -99,6 +104,19 @@ class AudioStream():
     NotImplemented
 
 
+class SmallerStream:
+    """temporary solution to pyaudio quadrupling samples returned"""
+    def __init__(self, stream):
+        self.stream = stream
+
+    def read(self, frame_size):
+        return self.stream.read(int(frame_size/4))
+
+    def stop(self):
+        self.stream.stop_stream()
+        self.stream.close()
+
+
 # ripped from audio.py
 class Song:
     def __init__(self, **kwargs):
@@ -157,6 +175,38 @@ class Downloader(threading.Thread):
 
         if(video is not None):
             self.song = Song(**video)
+
+
+# Also ripped from Audio :3
+def match_any_url(url):
+    url = urlparse(url)
+    if url.scheme and url.netloc and url.path:
+        return True
+    return False
+
+def match_sc_url(url):
+    sc_url = re.compile(
+        r'^(https?\:\/\/)?(www\.)?(soundcloud\.com\/)')
+    if sc_url.match(url):
+        return True
+    return False
+
+def match_yt_url(url):
+    yt_link = re.compile(
+        r'^(https?\:\/\/)?(www\.|m\.)?(youtube\.com|youtu\.?be)\/.+$')
+    if yt_link.match(url):
+        return True
+    return False
+
+# Checking only yt/sc now since someone could pull the IP by 
+# pointing the bot to their own server
+# TODO: add a toggle_any_url or whitelist regex/basepath w/ warning
+def valid_playable_url(url):
+    yt = match_yt_url(url)
+    sc = match_sc_url(url)
+    if yt or sc:  # TODO: Add sc check
+        return True
+    return False
 
 
 class ReactionRemoveEvent(asyncio.Event):
@@ -241,9 +291,10 @@ class Jamcord:
                 'preloads': []
             }
         }
-        interpreters['stack'] = {'class': StackTidalInterpreter,
-                                 'intro': interpreters['tidal']['intro'],
-                                 'hush' : interpreters['tidal']['hush']}
+        interpreters['stack'] = {'class'   : StackTidalInterpreter,
+                                 'intro'   : interpreters['tidal']['intro'],
+                                 'hush'    : interpreters['tidal']['hush'],
+                                 'preloads': interpreters['tidal']['preloads']}
         return interpreters
 
     def _save(self):
@@ -290,6 +341,21 @@ class Jamcord:
             self._save()
 
         return member
+
+    def parse_search_or_url(self, url_or_search_term):
+        """returns stripped url if it is valid (yt/sc) 
+        otherwise returns false if url is given but invalid
+        otherwise returns [SEARCH:] prepended search terms"""
+        url = url_or_search_term.strip("<>")
+
+        if match_any_url(url):
+            if not valid_playable_url(url):
+                return False
+        else:
+            url = url.replace("/", "&#47")
+            url = "[SEARCH:]" + url
+
+        return url
 
     @commands.group(pass_context=True, no_pm=True)
     async def sample(self, ctx):
@@ -358,19 +424,25 @@ class Jamcord:
         path = SAMPLE_PATH + name + '.wav'
         sample_exists = os.path.exists(path)
 
-        # resolve url
+        # prepare url
+        search = self.parse_search_or_url(search)
+
+        if not search: # not yt/sc (later add whitelisting/toggle)
+            return await self.bot.say("That is not a valid url")
+
         # see if we've resolved before
         # and values in case they rename samples I guess
         if (search in self.previous_sample_searches or
                 search in self.previous_sample_searches.values()):
             search = self.previous_sample_searches.get(search, search)
 
+        # resolve url
         m = None
-        if not search.startswith('http'):
+        if search.startswith('[SEARCH:]'):
             s = ('Sample name exists! One sec, grabbing link..'
                  if sample_exists else '🔎..')
             m = await self.bot.say(s)
-            d = await self._download_sample('[SEARCH:]' + search, options, False)
+            d = await self._download_sample(search, options, False)
             self.previous_sample_searches[search] = d.url
             search = d.url
 
@@ -477,6 +549,80 @@ class Jamcord:
         """all your jamming needs"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
+
+    @jam.command(pass_context=True, name="bot", no_pm=True)
+    async def jam_bot(self, ctx):
+        """[EXPERIMENTAL] Have the bot send your default audio input to Discord
+        This is only useful if you use Jack or SoundFlower to redirect your out to in
+
+        You must be in a voice channel to start this (so the bot knows where to go 👀) 
+        Do [p]jam bot again to stop
+
+        This command will attempt to pip install pyaudio if you don't have it.
+        pyaudio requires portaudio to install: http://www.portaudio.com/
+        You can install it with:
+        On Mac: brew install portaudio
+        On Linux: sudo apt install python3-pyaudio
+
+        Please submit a PR if you can figure out how to get it to send default
+        output directly :P
+
+        This will probably be replaced with an audio stream beinf served through a web server"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+
+        if pyaudio is None:
+            await self.bot.say("Wasn't able to import `pyaudio`. Try to `pip install` it? (y/n)")
+            answer = await self.bot.wait_for_message(timeout=30, author=author)
+            if answer.content.lower() in ('y', 'yes'):
+                m = await self.bot.say("Installing..")
+                success = self.bot.pip_install('pyaudio')
+                if not success:
+                    await self.bot.say("I wasn't able to install `pyaudio`. Please make sure you "
+                                       "have `portaudio` installed: http://www.portaudio.com/"
+                                       "\n**MAC**: `brew install portaudio`"
+                                       "\n**LINUX**: `sudo apt install python3-pyaudio`")
+                    return
+                await self.bot.edit_message(m, new_content='Installed!')
+            else:
+                await self.bot.say("Alright, I won't install it.")
+                return
+            
+
+        if channel.id not in self.sessions:
+            await self.bot.say('There is no jam session in this channel.')
+            return
+
+        if author.voice_channel is None:
+            await self.bot.say("Please join a voice channel first so "
+                               "I know where to go")
+            return
+
+        try:
+            vc = await self.bot.join_voice_channel(author.voice_channel)
+        except discord.ClientException:
+            await self.bot.say('Disconnecting from voice.')
+            if self.sessions[channel.id]['voice_client']:
+                self.sessions[channel.id]['voice_client'].audio_player.stop()
+            self.sessions[channel.id]['voice_client'] = None
+            return
+
+        await asyncio.sleep(1)  # bot some time to settle after joining
+
+        p = pyaudio.PyAudio()
+        audio_in = p.get_default_input_device_info()
+        stream = p.open(format=p.get_format_from_width(2),
+                        channels=int(audio_in['maxInputChannels']),
+                        rate=int(audio_in['defaultSampleRate']),
+                        input=True,
+                        # allow audio device choice later if needed
+                        input_device_index=audio_in['index'])
+        stream = SmallerStream(stream)
+        vc.audio_player = vc.create_stream_player(stream, after=stream.stop)
+        self.sessions[channel.id]['voice_client'] = vc
+        vc.audio_player.start()
+
 
     @jam.command(pass_context=True, name="setup", no_pm=True)
     async def jam_setup(self, ctx):
@@ -735,7 +881,8 @@ class Jamcord:
             'update_console': False,
             'clean_after': clean,
             'interpreter': Interpreter,
-            'hush': hush
+            'hush': hush,
+            'voice_client': None
         }
 
         session = self.sessions[channel.id]
