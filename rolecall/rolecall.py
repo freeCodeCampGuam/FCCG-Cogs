@@ -128,46 +128,56 @@ class RoleCall:
         await self.bot.say('Roleboard is now {}'.format(channel))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_board: discord.Channel, 
+    async def roleboard_add(self, ctx, role_board_channel: discord.Channel, 
                             content_or_message_id: str, role_name: str, 
                             role_emoji: str, 
                             role_channel_name: str = None,
                             ):
         """
-        Add an entry to a roleboard. If a message ID is provided, 
-        post a role to the existing message/entry.
-            
-        Optional role_channel_name will be the name of a private
-        channel that will be created for the members who hold the role. 
-        Specified name must be of a non-existing channel.
+        Add an entry to a roleboard. 
+        
+
+        role_board_channel => The channel where the entry will be posted.
+
+        content_or_message_id => Textual contents of the entry. If the message
+        already exists, provide the message id instead.
+
+        role_name => Name of the role. If a non-existing role is provided, 
+        it will be created for you.
+
+        role_emoji => Emoji corresponding to the role which users will click
+        on.
+ 
+        role_channel_name(Optional) => A private channel that members of the 
+        role will be granted access to.
         """
         server = ctx.message.server
         author = ctx.message.author
-
-        role_obj = await self.get_or_create("role", role_name, server)
+        role = await self.get_or_create("role", role_name, server)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
-
-        # get emoji name
-        role_emoji_name = role_emoji.replace(':','')
-
-        # make Entry object
-        entry = Entry(server, role_board, content_or_message_id, author, 
-                      role=role_obj, emoji=role_emoji_name)
+        if len(channels) == 2:
+            role_channel = self.bot.get_channel(channels[1])
+        else:
+            role_channel = role_channel_name
 
         # create the role's personal channel
-        if role_channel_name is not None:
-            everyone = discord.PermissionOverwrite(read_messages=False)
-            new_role = discord.PermissionOverwrite(read_messages=True)
-            try:
-                await self.bot.create_channel(server, role_channel_name, 
-                                              (server.default_role, everyone), 
-                                              (role_obj,new_role))
-            except Exception as e:
-                err_msg = 'Invalid role_channel_name specified'
-                await self.bot.send_message(role_board, err_msg)
-                return
+        try:
+            await self.create_or_edit_role_channel(server, role, role_channel)
+        except Exception as e:
+            print(e)
+            err_msg = 'Invalid role_channel_name specified'
+            await self.bot.send_message(role_board_channel, err_msg)
+            return
+
+        # get emoji name
+        role_emoji_name = role_emoji.replace(':', '')
+
+        # make Entry object
+        entry = Entry(server, role_board_channel, content_or_message_id, author, 
+                      role=role, emoji=role_emoji_name)
+
         # check if message ID was provided. If yes, post the new role to the 
         # message associated with the ID, if not, post the new entry to the 
         # chosen role board
@@ -180,7 +190,17 @@ class RoleCall:
         # record the entry
         self._record_entry(entry)
 
-      
+    async def create_or_edit_role_channel(self, server, role, role_channel):
+        if role_channel is not None:
+            everyone_perms = discord.PermissionOverwrite(read_messages=False)
+            new_role_perms = discord.PermissionOverwrite(read_messages=True)
+            if role_channel in server.channels:
+                await self.bot.edit_channel_permissions(role_channel, role, new_role_perms)
+            else:
+                await self.bot.create_channel(server, role_channel, 
+                                             (server.default_role, everyone_perms),
+                                             (role, new_role_perms))
+
     async def post_entry(self, entry: Entry):
         """ post entry to chosen roleboard(channel) """
 
