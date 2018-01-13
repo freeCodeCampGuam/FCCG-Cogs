@@ -578,6 +578,12 @@ class Jamcord:
             if answer.content.lower() in ('y', 'yes'):
                 m = await self.bot.say("Installing..")
                 success = self.bot.pip_install('pyaudio')
+                try:
+                    import pyaudio
+                    global pyaudio
+                    pyaudio = pyaudio
+                except ModuleNotFoundError:
+                    success = False
                 if not success:
                     await self.bot.say("I wasn't able to install `pyaudio`. Please make sure you "
                                        "have `portaudio` installed: http://www.portaudio.com/"
@@ -606,6 +612,7 @@ class Jamcord:
             if self.sessions[channel.id]['voice_client']:
                 self.sessions[channel.id]['voice_client'].audio_player.stop()
             self.sessions[channel.id]['voice_client'] = None
+            await server.voice_client.disconnect()
             return
 
         await asyncio.sleep(1)  # bot some time to settle after joining
