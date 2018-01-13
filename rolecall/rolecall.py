@@ -72,8 +72,9 @@ class RoleCall:
     def __init__(self, bot):
         self.bot = bot
         self.settings = dataIO.load_json(SETTINGS_PATH)
-        self.react_queue = []
-        self.refresh_queue_task = bot.loop.create_task(self.refresh_queue())
+        self.reaction_queue = {}
+        self.reaction_user_queue = set()
+        self.queue_processor_task = bot.loop.create_task(self.queue_processor())
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
@@ -265,64 +266,54 @@ class RoleCall:
 
         """
 
-        socket_msg = json.loads(msg)
+        reaction = json.loads(msg)
 
-        if socket_msg['t'] == 'MESSAGE_REACTION_ADD' or socket_msg['t'] == 'MESSAGE_REACTION_REMOVE':
+        if reaction['t'] == 'MESSAGE_REACTION_ADD' or reaction['t'] == 'MESSAGE_REACTION_REMOVE':
+            user_id = reaction['d']['user_id']
+            self.reaction_queue[user_id] = reaction
+            self.reaction_user_queue.add(user_id)
 
-            user_id = socket_msg['d']['user_id']
-            self.react_queue = [r for r in self.react_queue if r['d']['user_id'] != user_id]
-            self.react_queue.append(socket_msg)
-
-    async def refresh_queue(self):
-        """ Iterates the reaction queue every second. If reaction was added to a roleboard entry, corresponding role is assigned to user depending on the emoji pressed. If a reaction was removed, role is unassigned from user. 
+    async def queue_processor(self):
+        """ Iterates the reaction queue every  0.0001 seconds. If reaction was added to a roleboard entry, corresponding role is assigned to user depending on the emoji pressed. If a reaction was removed, role is unassigned from user 
         """
 
-        """
-        try:
-            while True:
-                print('boo!')
-                await asyncio.sleep(5)
-        except asyncio.CancelledError:
-            pass
-        
-        """
         while True:
-            for react in self.react_queue:
+            if self.reaction_user_queue:
+                next_key = self.reaction_user_queue.pop()
+                reaction = self.reaction_queue.pop(next_key)
+                await self.process_event(reaction)
+            await asyncio.sleep(0.0001)
 
-                channel = self.bot.get_channel(react['d']['channel_id'])
-                server = channel.server
-                message_id = react['d']['message_id']
-                message = await self.bot.get_message(channel, message_id)
-                author = message.author
-                emoji_id = react['d']['emoji']['id']
-                reaction = discord.utils.get(server.emojis, id=emoji_id)
+    async def process_event(self, reaction):
+        channel = self.bot.get_channel(reaction['d']['channel_id'])
+        server = channel.server
+        message_id = reaction['d']['message_id']
+        message = await self.bot.get_message(channel, message_id)
+        author = message.author
+        emoji_id = reaction['d']['emoji']['id']
+        reaction_emoji = discord.utils.get(server.emojis, id=emoji_id)
 
-                # make Entry object to handle data
-                entry = Entry(server, channel, message_id, author, 
-                    emoji=reaction)
+        # make Entry object to handle data
+        entry = Entry(server, channel, message_id, author, 
+            emoji=reaction_emoji)
 
-                # check if Entry exists in settings file. 
-                if self._check_entry(entry):
+        # check if Entry exists in settings file. 
+        if self._check_entry(entry):
 
-                    # get role and user
-                    role = await self._get_role_from_entry(entry)
-                    reactor = entry.server.get_member(react['d']['user_id'])
+            # get role and user
+            role = await self._get_role_from_entry(entry)
+            reactor = entry.server.get_member(reaction['d']['user_id'])
 
-                    # assign role to user who added the reaction 
-                    if react['t'] == 'MESSAGE_REACTION_ADD':
-                        
-                        # assign role if client is not a bot
-                        if not reactor.bot:
-                            await self.bot.add_roles(reactor, role)
+            # assign role to user who added the reaction 
+            if reaction['t'] == 'MESSAGE_REACTION_ADD':
+                
+                # assign role if client is not a bot
+                if not reactor.bot:
+                    await self.bot.add_roles(reactor, role)
 
-                    # unassign role from user who removed the reaction
-                    if react['t'] == 'MESSAGE_REACTION_REMOVE':
-                       await self.bot.remove_roles(reactor, role)
-
-            # clear queue
-            self.react_queue.clear()
-
-            await asyncio.sleep(0.01)
+            # unassign role from user who removed the reaction
+            if reaction['t'] == 'MESSAGE_REACTION_REMOVE':
+               await self.bot.remove_roles(reactor, role)
         
 
     def _save(self):
