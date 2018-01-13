@@ -612,6 +612,7 @@ class Jamcord:
             if self.sessions[channel.id]['voice_client']:
                 self.sessions[channel.id]['voice_client'].audio_player.stop()
             self.sessions[channel.id]['voice_client'] = None
+            await server.voice_client.disconnect()
             return
 
         await asyncio.sleep(1)  # bot some time to settle after joining
