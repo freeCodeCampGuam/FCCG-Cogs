@@ -17,47 +17,18 @@ SETTINGS_PATH = "data/rolecall/settings.json"
 DEFAULT_SETTINGS = {}
 
 ROLE_RECORD_STRUCT = {
-    "EMOJI_ID": None,
     "ROLE_ID": None,
     "ROLE_NAME": None
     }
 
 RGB_VALUE_LIMIT = 16777215
 
-"""
-Implementation notes:
-
-Set up each role through the bot. That way the bot has record of all message ids.
-Don't have to search through history or parse and can reconstruct roleboard elsewhere.
-
-Must listen for reaction add on each message. maybe just poll each message.
-keep track of changes yourself
-
-!rolecall roleboard #announcements
-!rolecall add @Website-Team Join if you'd like to follow the development of the FCCG Website.
-@Artists, @Writers, @Frontend, and @Backend, you may be interested if you are looking for a project to work on.
-
-bot: @Website-Team Join if you'd like to follow the development of the FCCG Website.
-@Artists, @Writers, @Frontend, and @Backend, you may be interested if you are looking for a project to work on.
-(@irdumb please add a reaction)
-
-if on mobile,
-!rolecall react Website-Team :emoji:
- try: add_reaction
- except: don't have perms or don't have access to that emoji, react it yourself or use a different emoji
-
-don't let people add themselves to a role if they mention it? to avoid mention spam
-
-WATCH_FOR: message members get stale. always check on a fresh copy from bot.get_message
-WATCH_FOR: you will need to go through and find the 1st role mention yourself or better yet, have it be an argument and don't require it to be in the message
-
-TODO: Make Entry/Call a class that handles the data for me (what is an entry on a roleboard called?)
-"""
 
 class Entry:
-    """Entry on the roleboard. Constructor only accepts one role because only a single role can be specified in the add command """
+    """ Entry on the roleboard. Constructor only accepts one role because only a single role can be specified in the add command. Emoji is a string to 
+    account for both custom and non-custom emojis """
 
-    def __init__(self, server: discord.Server, roleboard_channel: discord.Channel, content_or_message_id: str, author: discord.Member, role: discord.Role=None, emoji: discord.Emoji=None):
+    def __init__(self, server: discord.Server, roleboard_channel: discord.Channel, content_or_message_id: str, author: discord.Member, role: discord.Role=None, emoji: str=None):
         self.server = server
         self.roleboard_channel = roleboard_channel
         self.content_or_message_id = content_or_message_id
@@ -83,10 +54,9 @@ class RoleCall:
         server.setdefault(entry.roleboard_channel.id, {})
         server[entry.roleboard_channel.id].setdefault(entry.content_or_message_id, {})
         keyring = server[entry.roleboard_channel.id][entry.content_or_message_id]
-        keyring[entry.emoji.name] = deepcopy(ROLE_RECORD_STRUCT)
-        keyring[entry.emoji.name]['EMOJI_ID'] = entry.emoji.id
-        keyring[entry.emoji.name]['ROLE_ID'] = entry.role.id
-        keyring[entry.emoji.name]['ROLE_NAME'] = entry.role.name
+        keyring[entry.emoji] = deepcopy(ROLE_RECORD_STRUCT)
+        keyring[entry.emoji]['ROLE_ID'] = entry.role.id
+        keyring[entry.emoji]['ROLE_NAME'] = entry.role.name
         self._save()
 
     def _check_entry(self, entry: Entry):
@@ -109,7 +79,7 @@ class RoleCall:
         roleboard_id = entry.roleboard_channel.id
         message_id = entry.content_or_message_id
         keyring = self.settings[server_id][roleboard_id][message_id]
-        role_name = keyring[entry.emoji.name]['ROLE_NAME']
+        role_name = keyring[entry.emoji]['ROLE_NAME']
         role = await self.get_or_create('role', role_name, entry.server)
         return role
 
@@ -160,7 +130,7 @@ class RoleCall:
     @roleboard.command(pass_context=True, name="add", no_pm=True)
     async def roleboard_add(self, ctx, role_board: discord.Channel, 
                             content_or_message_id: str, role_name: str, 
-                            role_emoji: discord.Emoji, 
+                            role_emoji: str, 
                             role_channel_name: str = None,
                             ):
         """
@@ -179,9 +149,12 @@ class RoleCall:
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
 
+        # get emoji name
+        role_emoji_name = role_emoji.replace(':','')
+
         # make Entry object
         entry = Entry(server, role_board, content_or_message_id, author, 
-                      role=role_obj, emoji=role_emoji)
+                      role=role_obj, emoji=role_emoji_name)
 
         # create the role's personal channel
         if role_channel_name is not None:
@@ -253,19 +226,6 @@ class RoleCall:
         """ Listens to reaction adds/removes and adds them to the reaction 
         queue """
 
-        
-        """ format of raw reaction add message:
-
-        {'d': {'channel_id': '206326891752325122', 'user_id': '208810344729018369', 'message_id': '398806773542158357', 'emoji': {'animated': False, 'id': '344074096398565376', 'name': 'blobderpy'}}, 's': 269, 't': 'MESSAGE_REACTION_ADD', 'op': 0}
-
-        """
-
-        """ format of raw reaction remove message:
-
-        {"t":"MESSAGE_REACTION_REMOVE","s":308,"op":0,"d":{"user_id":"208810344729018369","message_id":"399903367175864320","emoji":{"name":"irdumbs","id":"344074096092381184","animated":false},"channel_id":"206326891752325122"}}
-
-        """
-
         reaction = json.loads(msg)
 
         if reaction['t'] == 'MESSAGE_REACTION_ADD' or reaction['t'] == 'MESSAGE_REACTION_REMOVE':
@@ -285,17 +245,29 @@ class RoleCall:
             await asyncio.sleep(0.0001)
 
     async def process_event(self, reaction):
+
+        """ format of raw reaction add message:
+
+        {'d': {'channel_id': '206326891752325122', 'user_id': '208810344729018369', 'message_id': '398806773542158357', 'emoji': {'animated': False, 'id': '344074096398565376', 'name': 'blobderpy'}}, 's': 269, 't': 'MESSAGE_REACTION_ADD', 'op': 0}
+
+        """
+
+        """ format of raw reaction remove message:
+
+        {"t":"MESSAGE_REACTION_REMOVE","s":308,"op":0,"d":{"user_id":"208810344729018369","message_id":"399903367175864320","emoji":{"name":"irdumbs","id":"344074096092381184","animated":false},"channel_id":"206326891752325122"}}
+
+        """
+
         channel = self.bot.get_channel(reaction['d']['channel_id'])
         server = channel.server
         message_id = reaction['d']['message_id']
         message = await self.bot.get_message(channel, message_id)
         author = message.author
-        emoji_id = reaction['d']['emoji']['id']
-        reaction_emoji = discord.utils.get(server.emojis, id=emoji_id)
+        emoji_name = reaction['d']['emoji']['name']
 
         # make Entry object to handle data
         entry = Entry(server, channel, message_id, author, 
-            emoji=reaction_emoji)
+            emoji=emoji_name)
 
         # check if Entry exists in settings file. 
         if self._check_entry(entry):
