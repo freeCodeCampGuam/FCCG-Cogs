@@ -245,6 +245,7 @@ class Jamcord:
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.previous_sample_searches = {}
         self.interpreters = self._get_interpreter_data(self.settings['INTERPRETER_PATHS'])
+        self.pyaudio = pyaudio
 
     def _get_interpreter_data(self, paths):
         # load interpreter paths into sys.path
@@ -572,7 +573,7 @@ class Jamcord:
         channel = ctx.message.channel
         author = ctx.message.author
 
-        if pyaudio is None:
+        if self.pyaudio is None:
             await self.bot.say("Wasn't able to import `pyaudio`. Try to `pip install` it? (y/n)")
             answer = await self.bot.wait_for_message(timeout=30, author=author)
             if answer.content.lower() in ('y', 'yes'):
@@ -580,8 +581,7 @@ class Jamcord:
                 success = self.bot.pip_install('pyaudio')
                 try:
                     import pyaudio
-                    global pyaudio
-                    pyaudio = pyaudio
+                    self.pyaudio = pyaudio
                 except ModuleNotFoundError:
                     success = False
                 if not success:
@@ -617,7 +617,7 @@ class Jamcord:
 
         await asyncio.sleep(1)  # bot some time to settle after joining
 
-        p = pyaudio.PyAudio()
+        p = self.pyaudio.PyAudio()
         audio_in = p.get_default_input_device_info()
         stream = p.open(format=p.get_format_from_width(2),
                         channels=int(audio_in['maxInputChannels']),
