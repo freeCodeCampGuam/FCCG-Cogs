@@ -759,7 +759,7 @@ class Jamcord:
             return await self.bot.say('There is no jam session in this channel')
         if seconds == -1:
             return await self.bot.say('will not clean new messages')
-        await self.bot.say('will clean new messages after {} seconds')
+        await self.bot.say('will clean new messages after {} seconds'.format(seconds))
 
     @checks.is_owner()
     @jam.command(pass_context=True, name="invite", no_pm=True)
