@@ -95,37 +95,6 @@ class RoleCall:
         else:
             self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
-    @roleboard.command(pass_context=True, name="channel", no_pm=True)
-    async def roleboard_channel(self, ctx, channel: discord.Channel=None):
-        """Set the roleboard for this server.
-        Leave blank to turn off the roleboard
-        """
-        server = ctx.message.server
-        author = ctx.message.author
-
-
-        """
-        TODO: limit amount of messages. when over,
-            log warning and DM server owner /
-            infractor (if he's adding a new invite)
-        ^ invalid todo due to updated implementation notes
-        """
-
-        settings = self.settings[server.id]
-
-        if channel is None and not \
-           await self.prompt(ctx, "turn off the roleboard? (yes/no)"):
-            if settings["ROLEBOARD"] is None:
-                rb_channel = None
-            else:
-                rb_channel = get_channel_by_name(server, settings["ROLEBOARD"])
-            await self.bot.say('Ok. Roleboard is still {}'
-                               .format(rb_channel and rb_channel.   mention))
-            return
-        settings["ROLEBOARD"] = channel and channel.name
-        self._save()
-        await self.bot.say('Roleboard is now {}'.format(channel))
-
     @roleboard.command(pass_context=True, name="add", no_pm=True)
     async def roleboard_add(self, ctx, role_board_channel: discord.Channel, 
                             content_or_message_id: str, role_name: str, 
