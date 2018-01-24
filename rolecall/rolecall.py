@@ -87,7 +87,8 @@ class RoleCall:
 
     @commands.group(pass_context=True, no_pm=True)
     async def rolecall(self, ctx):
-        """change roleboard settings"""
+        """ Add emojis to a message where each emoji corresponds to a chosen role. 
+        If emoji is clicked, the corresponding role is assigned to the user. """
         server = ctx.message.server
 
         if ctx.invoked_subcommand is None:
@@ -102,34 +103,32 @@ class RoleCall:
                             private_channel: str = None,
                             ):
         """
-        Add a role to a message. You may create a new message or provide
-        the message id of an existing one.
+        Add a role to a message. 
         
+        channel
 
-        *channel*
+           The channel where the new message will be posted or the channel
+           where the existing message is located
 
-        The channel where the new message will be posted or the channel
-        where the existing message is located
+        content_or_message_id
 
-        *content_or_message_id*
+           Contents of the message. If the message
+           already exists, provide the message id instead.
 
-        Textual contents of the entry. If the message
-        already exists, provide the message id instead.
+        role 
 
-        *role* 
+           Name of the role. If a non-existing role is provided, 
+           it will be created for you.
 
-        Name of the role. If a non-existing role is provided, 
-        it will be created for you.
+        emoji 
 
-        *emoji* 
-
-        Emoji corresponding to the role which users will click
-        on.
+           Emoji corresponding to the role which users will click
+           on.
  
-        *private_channel(Optional)* 
+        private_channel(Optional) 
 
-        A private channel that members of the role will be granted access to. 
-        If a non-existing channel is provided, it will be created for you.
+           A private channel that members of the role will be granted access to. 
+           If a non-existing channel is provided, it will be created for you.
         """
         server = ctx.message.server
         author = ctx.message.author
