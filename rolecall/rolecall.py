@@ -86,7 +86,7 @@ class RoleCall:
         return role
 
     @commands.group(pass_context=True, no_pm=True)
-    async def roleboard(self, ctx):
+    async def rolecall(self, ctx):
         """change roleboard settings"""
         server = ctx.message.server
 
@@ -96,7 +96,7 @@ class RoleCall:
             self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def roleboard_add(self, ctx, role_board_channel: discord.Channel, 
+    async def rolecall_add(self, ctx, role_board_channel: discord.Channel, 
                             content_or_message_id: str, role_name: str, 
                             role_emoji: str, 
                             role_channel_name: str = None,
