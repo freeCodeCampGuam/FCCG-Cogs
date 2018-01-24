@@ -25,10 +25,13 @@ RGB_VALUE_LIMIT = 16777215
 
 
 class Entry:
-    """ Entry on the roleboard. Constructor only accepts one role because only a single role can be specified in the add command. Emoji is a string to 
-    account for both custom and non-custom emojis """
+    """ Entry on the roleboard. Constructor only accepts one role 
+    because only a single role can be specified in the add command. 
+    Emoji is a string to account for both custom and non-custom emojis """
 
-    def __init__(self, server: discord.Server, roleboard_channel: discord.Channel, content_or_message_id: str, author: discord.Member, role: discord.Role=None, emoji: str=None):
+    def __init__(self, server: discord.Server, roleboard_channel: discord.Channel, 
+                 content_or_message_id: str, author: discord.Member, 
+                 role: discord.Role=None, emoji: str=None):
         self.server = server
         self.roleboard_channel = roleboard_channel
         self.content_or_message_id = content_or_message_id
@@ -60,9 +63,8 @@ class RoleCall:
         self._save()
 
     def _check_entry(self, entry: Entry):
-        """ Checks if entry exists in the settings file. 
-
-        Returns true if it does, otherwise, returns false.
+        """ Checks if entry exists in the settings file and 
+        returns true if it does, otherwise, returns false.
         """ 
 
         entries = self.settings[entry.server.id][entry.roleboard_channel.id]
@@ -96,11 +98,9 @@ class RoleCall:
     @roleboard.command(pass_context=True, name="channel", no_pm=True)
     async def roleboard_channel(self, ctx, channel: discord.Channel=None):
         """Set the roleboard for this server.
-
         Leave blank to turn off the roleboard
         """
         server = ctx.message.server
-        #channel = ctx.message.channel
         author = ctx.message.author
 
 
@@ -122,7 +122,6 @@ class RoleCall:
             await self.bot.say('Ok. Roleboard is still {}'
                                .format(rb_channel and rb_channel.   mention))
             return
-
         settings["ROLEBOARD"] = channel and channel.name
         self._save()
         await self.bot.say('Roleboard is now {}'.format(channel))
@@ -218,7 +217,6 @@ class RoleCall:
     async def prompt(self, ctx, *args, **kwargs):
         """prompts author with a message (yes/no)
         the prompt is sent via bot.say with the additional args,kwargs passed
-
         returns True/False/None depending on the user's answer
         """
         channel = ctx.message.channel
@@ -231,7 +229,6 @@ class RoleCall:
             pass
 
         mcheck = lambda msg: msg.content.lower().startswith(('yes', 'no', 'cancel'))
-
         tasks = (self.bot.wait_for_message(author=author, timeout=15, channel=channel,
                                            check=mcheck),
                  self.bot.wait_for_reaction(user=author, timeout=15, message=message,
@@ -239,7 +236,6 @@ class RoleCall:
 
         converters = (lambda r: r.content.lower().startswith('yes'),
                       lambda r: r.reaction.emoji == '✅')
-
         return await wait_for_first_response(tasks, converters)
 
     async def on_socket_raw_receive(self, msg):
@@ -247,14 +243,16 @@ class RoleCall:
         queue """
 
         reaction = json.loads(msg)
-
         if reaction['t'] == 'MESSAGE_REACTION_ADD' or reaction['t'] == 'MESSAGE_REACTION_REMOVE':
             user_id = reaction['d']['user_id']
             self.reaction_queue[user_id] = reaction
             self.reaction_user_queue.add(user_id)
 
     async def queue_processor(self):
-        """ Iterates the reaction queue every  0.0001 seconds. If reaction was added to a roleboard entry, corresponding role is assigned to user depending on the emoji pressed. If a reaction was removed, role is unassigned from user 
+        """ Iterates the reaction queue every  0.0001 seconds. If reaction was 
+        added to a roleboard entry, corresponding role is assigned to user 
+        depending on the emoji pressed. If a reaction was removed, role is 
+        unassigned from user 
         """
 
         while True:
@@ -268,13 +266,19 @@ class RoleCall:
 
         """ format of raw reaction add message:
 
-        {'d': {'channel_id': '206326891752325122', 'user_id': '208810344729018369', 'message_id': '398806773542158357', 'emoji': {'animated': False, 'id': '344074096398565376', 'name': 'blobderpy'}}, 's': 269, 't': 'MESSAGE_REACTION_ADD', 'op': 0}
+        {'d': {'channel_id': '206326891752325122', 'user_id': '208810344729018369', 
+        'message_id': '398806773542158357', 'emoji': {'animated': False, 
+        'id': '344074096398565376', 'name': 'blobderpy'}}, 's': 269, 
+        't': 'MESSAGE_REACTION_ADD', 'op': 0}
 
         """
 
         """ format of raw reaction remove message:
 
-        {"t":"MESSAGE_REACTION_REMOVE","s":308,"op":0,"d":{"user_id":"208810344729018369","message_id":"399903367175864320","emoji":{"name":"irdumbs","id":"344074096092381184","animated":false},"channel_id":"206326891752325122"}}
+        {"t":"MESSAGE_REACTION_REMOVE","s":308,"op":0,"d":{
+        "user_id":"208810344729018369","message_id":"399903367175864320",
+        "emoji":{"name":"irdumbs","id":"344074096092381184","animated":false},
+        "channel_id":"206326891752325122"}}
 
         """
 
