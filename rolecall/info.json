@@ -1,10 +1,9 @@
 {
-    "AUTHOR" : "irdumb",
-    "INSTALL_MSG" : "You may now force people to assume roles.",
+    "AUTHOR" : "lestrata, irdumb",
+    "INSTALL_MSG" : "Welcome to Rolecall! This cog provides a way for you to let your server members assign roles to themselves. \nHow? Well, the cog will allow you to add reactions to messages and a corresponding role to the reaction. \nWhen the reaction is clicked, the role you have chosen will be assigned to the user who clicked it.\n\nFor more information about the commands, use [p]help rolecall. \n\nRock n' Roleee!!!",
     "NAME" : "rolecall",
-    "SHORT" : "Assign roles to server members",
-    "DESCRIPTION" : "Grant a role to members of your server.",
+    "SHORT" : "Rolecall is an easy way to let your members choose their own roles",
+    "DESCRIPTION" : "Rolecall lets you assign roles to server members when they click on reactions",
     "TAGS" : ["role", "group", "classify", "tag", "label"],
-    "REQUIREMENTS" : [""],
-    "HIDDEN" : true
+    "REQUIREMENTS" : []
 }
