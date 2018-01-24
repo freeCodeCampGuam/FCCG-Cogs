@@ -96,56 +96,67 @@ class RoleCall:
             self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
     @roleboard.command(pass_context=True, name="add", no_pm=True)
-    async def rolecall_add(self, ctx, role_board_channel: discord.Channel, 
-                            content_or_message_id: str, role_name: str, 
-                            role_emoji: str, 
-                            role_channel_name: str = None,
+    async def rolecall_add(self, ctx, channel: discord.Channel, 
+                            content_or_message_id: str, role: str, 
+                            emoji: str, 
+                            private_channel: str = None,
                             ):
         """
-        Add an entry to a roleboard. 
+        Add a role to a message. You may create a new message or provide
+        the message id of an existing one.
         
 
-        role_board_channel => The channel where the entry will be posted.
+        *channel*
 
-        content_or_message_id => Textual contents of the entry. If the message
+        The channel where the new message will be posted or the channel
+        where the existing message is located
+
+        *content_or_message_id*
+
+        Textual contents of the entry. If the message
         already exists, provide the message id instead.
 
-        role_name => Name of the role. If a non-existing role is provided, 
+        *role* 
+
+        Name of the role. If a non-existing role is provided, 
         it will be created for you.
 
-        role_emoji => Emoji corresponding to the role which users will click
+        *emoji* 
+
+        Emoji corresponding to the role which users will click
         on.
  
-        role_channel_name(Optional) => A private channel that members of the 
-        role will be granted access to. If a non-existing channel is provided,
-        it will be created for you.
+        *private_channel(Optional)* 
+
+        A private channel that members of the role will be granted access to. 
+        If a non-existing channel is provided, it will be created for you.
         """
         server = ctx.message.server
         author = ctx.message.author
-        role = await self.get_or_create("role", role_name, server)
+        role_object = await self.get_or_create("role", role, server)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
         if len(channels) == 2:
             role_channel = self.bot.get_channel(channels[1])
         else:
-            role_channel = role_channel_name
+            role_channel = private_channel
 
         # create the role's personal channel
         try:
-            await self.create_or_edit_role_channel(server, role, role_channel)
+            await self.create_or_edit_role_channel(server, role_object, role_channel)
         except Exception as e:
             print(e)
-            err_msg = 'Invalid role_channel_name specified'
-            await self.bot.send_message(role_board_channel, err_msg)
+            err_msg = 'Invalid private_channel specified'
+            await self.bot.send_message(channel, err_msg)
             return
 
         # get emoji name
-        role_emoji_name = role_emoji.replace(':', '')
+        emoji_name = emoji.replace(':', '')
 
         # make Entry object
-        entry = Entry(server, role_board_channel, content_or_message_id, author, 
-                      role=role, emoji=role_emoji_name)
+        entry = Entry(server, channel, content_or_message_id, author, 
+                      role=role_object, emoji=emoji_name)
 
         # check if message ID was provided. If yes, post the new role to the 
         # message associated with the ID, if not, post the new entry to the 
