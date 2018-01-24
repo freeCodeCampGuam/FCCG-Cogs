@@ -132,7 +132,13 @@ class RoleCall:
         """
         server = ctx.message.server
         author = ctx.message.author
-        role_object = await self.get_or_create("role", role, server)
+
+        # retrieve role mentions in the command message
+        roles = ctx.message.raw_role_mentions
+        if len(roles) == 1:
+            role_object = discord.utils.get(server.roles, id=roles[0])
+        else:
+            role_object = await self.get_or_create("role", role, server)
 
         # retrieve channel mentions in the command message
         channels = ctx.message.raw_channel_mentions
