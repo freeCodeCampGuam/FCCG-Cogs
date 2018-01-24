@@ -117,7 +117,8 @@ class RoleCall:
         on.
  
         role_channel_name(Optional) => A private channel that members of the 
-        role will be granted access to.
+        role will be granted access to. If a non-existing channel is provided,
+        it will be created for you.
         """
         server = ctx.message.server
         author = ctx.message.author
@@ -159,6 +160,9 @@ class RoleCall:
         self._record_entry(entry)
 
     async def create_or_edit_role_channel(self, server, role, role_channel):
+        """ creates a private channel for the role. If provided channel exists,
+        edits permissions of the channel in favor of the role provided. """
+
         if role_channel is not None:
             everyone_perms = discord.PermissionOverwrite(read_messages=False)
             new_role_perms = discord.PermissionOverwrite(read_messages=True)
