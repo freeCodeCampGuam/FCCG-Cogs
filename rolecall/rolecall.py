@@ -95,7 +95,7 @@ class RoleCall:
         else:
             self.settings.setdefault(server.id, deepcopy(DEFAULT_SETTINGS))
 
-    @roleboard.command(pass_context=True, name="add", no_pm=True)
+    @rolecall.command(pass_context=True, name="add", no_pm=True)
     async def rolecall_add(self, ctx, channel: discord.Channel, 
                             content_or_message_id: str, role: str, 
                             emoji: str, 
