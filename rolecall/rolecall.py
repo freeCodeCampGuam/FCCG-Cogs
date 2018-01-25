@@ -10,6 +10,7 @@ from copy import deepcopy
 import json
 import threading
 from random import randint
+import re
 
 log = logging.getLogger("red.rolecall")
 
@@ -52,7 +53,8 @@ class RoleCall:
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
-
+        if type(entry.emoji) is discord.Emoji:
+            entry.emoji = entry.emoji.name
         server = self.settings[entry.server.id]
         server.setdefault(entry.roleboard_channel.id, {})
         server[entry.roleboard_channel.id].setdefault(entry.content_or_message_id, {})
@@ -156,12 +158,18 @@ class RoleCall:
             await self.bot.send_message(channel, err_msg)
             return
 
-        # get emoji name
-        emoji_name = emoji.replace(':', '')
+        # get emoji name(if unicode emoji) or get emoji object(if custom emoji)
+        emoji_name_or_obj = emoji.strip(':')
+        try:
+            potential_custom_emoji_id = re.findall('\d+', emoji_name_or_obj)[0]
+            if potential_custom_emoji_id in [e.id for e in server.emojis]:
+                emoji_name_or_obj = discord.utils.get(server.emojis, id=potential_custom_emoji_id)
+        except Exception as e:
+            pass # determined to be a unicode emoji
 
         # make Entry object
         entry = Entry(server, channel, content_or_message_id, author, 
-                      role=role_object, emoji=emoji_name)
+                      role=role_object, emoji=emoji_name_or_obj)
 
         # check if message ID was provided. If yes, post the new role to the 
         # message associated with the ID, if not, post the new entry to the 
