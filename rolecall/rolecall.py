@@ -11,7 +11,7 @@ import json
 import threading
 from random import randint
 import re
-
+    
 log = logging.getLogger("red.rolecall")
 
 SETTINGS_PATH = "data/rolecall/settings.json"
@@ -53,7 +53,7 @@ class RoleCall:
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
-        if type(entry.emoji) is discord.Emoji:
+        if isinstance(entry.emoji, discord.Emoji):
             entry.emoji = entry.emoji.name
         server = self.settings[entry.server.id]
         server.setdefault(entry.roleboard_channel.id, {})
