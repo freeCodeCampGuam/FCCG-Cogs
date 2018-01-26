@@ -135,28 +135,34 @@ class RoleCall:
         server = ctx.message.server
         author = ctx.message.author
 
-        # retrieve role mentions in the command message
-        roles = ctx.message.raw_role_mentions
-        if len(roles) == 1:
-            role_object = discord.utils.get(server.roles, id=roles[0])
-        else:
-            role_object = await self.get_or_create("role", role, server)
-
-        # retrieve channel mentions in the command message
-        channels = ctx.message.raw_channel_mentions
-        if len(channels) == 2:
-            role_channel = self.bot.get_channel(channels[1])
+        # check if role was mentioned 
+        nums_found = re.findall('\d+', role)
+        if nums_found:
+            potential_role_id = nums_found[0]
+            if potential_role_id in [r.id for r in server.roles]:
+                role_object = discord.utils.get(server.roles, id=potential_role_id)
+            else:
+                role_object = await self.get_or_create("role", role, server)
+            
+        # check if channel was mentioned
+        if private_channel is None: 
+            pass
         else:
             role_channel = private_channel
+            nums_found = re.findall('\d+', private_channel)
+            if nums_found:
+                potential_channel_id = nums_found[0]
+                if potential_channel_id in [c.id for c in server.channels]:
+                    role_channel = self.bot.get_channel(potential_channel_id)
 
-        # create the role's personal channel
-        try:
-            await self.create_or_edit_role_channel(server, role_object, role_channel)
-        except Exception as e:
-            print(e)
-            err_msg = 'Invalid private_channel specified'
-            await self.bot.send_message(channel, err_msg)
-            return
+            # create the role's personal channel
+            try:
+                await self.create_or_edit_role_channel(server, role_object, role_channel)
+            except Exception as e:
+                print(e)
+                err_msg = 'Invalid private_channel specified'
+                await self.bot.send_message(channel, err_msg)
+                return
 
         # get emoji name(if unicode emoji) or get emoji object(if custom emoji)
         emoji_name_or_obj = emoji.strip(':')
