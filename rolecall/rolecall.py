@@ -87,6 +87,18 @@ class RoleCall:
         role = await self.get_or_create('role', role_name, entry.server)
         return role
 
+    def _get_emoji_from_entry(self, entry: Entry):
+        """ Accesses entry and retrieves emoji that corresponds to the
+        role given """ 
+
+        server_id = entry.server.id
+        roleboard_id = entry.roleboard_channel.id
+        message_id = entry.content_or_message_id
+        keyring = self.settings[server_id][roleboard_id][message_id]
+        for emoji,role in keyring.items():
+            if entry.role.id == role['ROLE_ID']:
+                return emoji
+
     @commands.group(pass_context=True, no_pm=True)
     async def rolecall(self, ctx):
         """ Add emojis to a message where each emoji corresponds to a chosen role. 
@@ -140,10 +152,8 @@ class RoleCall:
             potential_role_id = nums_found[0]
             if potential_role_id in [r.id for r in server.roles]:
                 role_object = discord.utils.get(server.roles, id=potential_role_id)
-            else:
-                role_object = await self.get_or_create("role", role, server)
-
-        # check if role is already linked entry chosen
+        else:
+            role_object = await self.get_or_create("role", role, server)
             
         # check if channel was mentioned
         if private_channel is None: 
@@ -178,22 +188,45 @@ class RoleCall:
         entry = Entry(server, channel, content_or_message_id, author, 
                       role=role_object, emoji=emoji_name_or_obj)
 
-        # check if message ID was provided. If yes, post the new role to the 
-        # message associated with the ID, if not, post the new entry to the 
-        # chosen role board
+        # check if role or emoji is already used in the entry
         try:
-            emojis = self.settings[entry.server.id][entry.roleboard_channel.id][entry.content_or_message_id]
-            if entry.role.id in [e['ROLE_ID'] for e in emojis.values()]:
-                bound_role_msg = "❌ the role {} is already linked to {}".format(entry.role, entry.emoji)
-                await self.bot.send_message(entry.roleboard_channel, content=bound_role_msg)
-            else:
-                await self.post_role(entry)
+            if self.isduplicate('role', entry):
+                bound_emoji = self._get_emoji_from_entry(entry)
+                bound_role_msg = "❌ the role {} is already linked to {}".format(entry.role, bound_emoji)
+                await self.bot.send_message(ctx.message.channel, content=bound_role_msg)
+                return 
+            if self.isduplicate('emoji', entry):
+                bound_role = await self._get_role_from_entry(entry)
+                bound_emoji_msg = "❌ the emoji {} is already linked to {}".format(entry.emoji, bound_role)
+                await self.bot.send_message(ctx.message.channel, content=bound_emoji_msg)
+                return
+
+        except Exception as e:
+            pass
+
+        # check if message ID was provided. If yes, and if the role is not 
+        # linked to an emoji yet, post the new role to the message associated 
+        # with the ID, if not, post the new entry to the chosen role board
+        try:
+            await self.post_role(entry)
         except Exception as e:
             msg = await self.post_entry(entry)
             entry.content_or_message_id = msg.id
 
         # record the entry
         self._record_entry(entry)
+
+    def isduplicate(self, otype, entry): 
+        """ checks if role or emoji has already been used in the message """
+        channel = self.settings[entry.server.id][entry.roleboard_channel.id]
+        keyring = channel[entry.content_or_message_id]
+        if otype == 'role':
+            if entry.role.id in [e['ROLE_ID'] for e in keyring.values()]:
+                return True
+        else:
+            if entry.emoji in [e for e in keyring]:
+                return True
+        return False
 
     async def create_or_edit_role_channel(self, server, role, role_channel):
         """ creates a private channel for the role. If provided channel exists,
