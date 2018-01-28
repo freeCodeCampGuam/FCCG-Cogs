@@ -142,6 +142,8 @@ class RoleCall:
                 role_object = discord.utils.get(server.roles, id=potential_role_id)
             else:
                 role_object = await self.get_or_create("role", role, server)
+
+        # check if role is already linked entry chosen
             
         # check if channel was mentioned
         if private_channel is None: 
@@ -180,7 +182,12 @@ class RoleCall:
         # message associated with the ID, if not, post the new entry to the 
         # chosen role board
         try:
-            await self.post_role(entry)
+            emojis = self.settings[entry.server.id][entry.roleboard_channel.id][entry.content_or_message_id]
+            if entry.role.id in [e['ROLE_ID'] for e in emojis.values()]:
+                bound_role_msg = "❌ the role {} is already linked to {}".format(entry.role, entry.emoji)
+                await self.bot.send_message(entry.roleboard_channel, content=bound_role_msg)
+            else:
+                await self.post_role(entry)
         except Exception as e:
             msg = await self.post_entry(entry)
             entry.content_or_message_id = msg.id
@@ -251,7 +258,6 @@ class RoleCall:
             emoji_name = reaction['d']['emoji']['name'] 
             self.reaction_queue[user_id][emoji_name] = reaction
             self.reaction_user_queue.add(user_id)
-            print(len(self.reaction_queue[user_id]))
 
     async def queue_processor(self):
         """ Iterates the reaction queue every  0.1 seconds. If reaction was 
