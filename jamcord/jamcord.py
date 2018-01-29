@@ -139,6 +139,11 @@ INTERPRETER_PRESETS = {
 # x: display "user: input" if no stdout / result
 # x: add a way for users to send permanent msgs if in cleanup mode
 # TODO: @mention users if error. (if interpreter-specific regex is matched?)
+# TODO: split interpreter config in own files
+#   data/jamcord/interpreters/
+#       foxdot.json
+#       tidal.json
+# TODO: write generic socket repl for Extempore and like envs
 
 
 _reaction_remove_events = set()
