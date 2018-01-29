@@ -87,7 +87,7 @@ SUPPORTED_SAMPLE_EXTS = ('.wav',)
 _reaction_remove_events = set()
 
 
-# TODO
+# heavily based on Troop's interpreter
 class Interpreter():
     """Replace Troop w/ a general purpose cmd line 
     livecoding env communication thingamajig.
@@ -95,7 +95,93 @@ class Interpreter():
     add subclasses for specifics needed. 
     maybe move all that self.interpreter stuff into those
     """
-    NotImplemented
+
+    def __init__(self, cwd, command, eval_fmt="{}\n", preloads=[], readable=True):
+        self.ready = False
+        self.command = command
+        self.cwd = cwd
+        self.eval_fmt = eval_fmt.format
+        self.preloads = preloads
+        self.output_q = Queue()
+        self.done = False
+        self.cli = subprocess.Popen(self.command, shell=True,
+                                    universal_newlines=True,
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    cwd=self.cwd)
+        for l in self.preloads:
+            self.eval(l)
+        self.readable = readable
+        self.ready = True
+        if readable:
+            self.output_thread = threading.Thread(target=self._watch_output)
+            self.output_thread.start()
+
+    def is_alive(self):
+        if self.cli is None or self.cli.returncode is not None or self.done:
+            return False
+        return True
+
+    def _watch_output(self):
+        while self.is_alive():
+            time.sleep(.1)
+            try:
+                for line in iter(self.cli.stdout.readline, ""):
+                    self.output_q.put(line)
+            except ValueError:  # closed file
+                continue
+
+    def eval(self, string):
+        self.cli.stdin.write(self.eval_fmt(string))
+        self.cli.stdin.flush()
+
+    def read(self):
+        result = []
+        while True:
+            try:
+                result.append(self.output_q.get_nowait())
+            except Empty:
+                return "\n".join(result)
+
+    def kill(self):
+        threading.Thread(target=self._block_kill).start()
+
+    def _block_kill(self):
+        self.cli.communicate()
+        self.cli.kill()
+
+
+# hmm...
+class InterpreterWithServers(Interpreter):
+    """just to consolidate interpreter heirarchies"""
+
+    def __init__(self, loop, cwd, command, eval_fmt="{}\n", preloads=[],
+                 readable=True, servers=[]):
+        self.ready = False
+        self.servers = []
+        loop.create_task(self._start(cwd, command, eval_fmt, preloads, servers))
+
+    async def _start(self, cwd, command, eval_fmt, preloads, servers):
+        for s in servers:
+            self.servers.append(Interpreter(s['cwd'], s['cmd'], eval_fmt='{}',
+                                            preloads=s['preloads'],
+                                            readable=s['print']))
+            await asyncio.sleep(s['wait'])
+        super().__init__(cwd, command, eval_fmt, preloads)
+
+    def kill(self):
+        super().kill()
+        for s in self.servers:
+            s.kill()
+
+    def read(self):
+        result = []
+        for s in self.servers:
+            if s.readable:
+                result.append(s.read())
+        result.append(super().read())
+        return "\n".join(result)
 
 
 # TODO
