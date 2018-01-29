@@ -3,17 +3,16 @@ from discord.ext import commands
 from cogs.utils import checks
 from cogs.utils.dataIO import dataIO
 from cogs.utils.chat_formatting import pagify
-import traceback
 from contextlib import redirect_stdout
-import io
 import re
-import sys
 import asyncio
 import youtube_dl
 import threading
 import os
+import subprocess
 from glob import glob
-from collections import deque
+from queue import Queue, Empty
+import time
 from urllib.parse import urlparse
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
