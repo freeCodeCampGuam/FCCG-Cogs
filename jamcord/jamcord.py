@@ -793,7 +793,6 @@ class Jamcord:
         self.sessions[channel.id]['voice_client'] = vc
         vc.audio_player.start()
 
-
     @jam.command(pass_context=True, name="setup", no_pm=True)
     async def jam_setup(self, ctx):
         """since this cog is in alpha, you'll need to setup some things first
@@ -996,8 +995,8 @@ class Jamcord:
         self.sessions[channel.id]['click_wait'].cancel()
 
     @jam.command(pass_context=True, no_pm=True, name="on")
-    async def jam_on(self, ctx, kind: str='FoxDot', 
-                        console: bool=True, clean: int=-1):
+    async def jam_on(self, ctx, kind: str='FoxDot',
+                     console: bool=True, clean: int=-1):
         """start up a collab LiveCoding session
         set the console off if you're joining someone else's jam
 
