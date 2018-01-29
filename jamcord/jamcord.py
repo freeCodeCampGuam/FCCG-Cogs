@@ -26,7 +26,7 @@ except:
 
 
 SETTINGS_PATH = "data/jamcord/settings.json"
-INTERPRETERS_PATH = "data/jamcord/interpreters.json"
+INTERPRETERS_PATH = "data/jamcord/interpreters/"
 SAMPLE_PATH = 'data/jamcord/samples/'
 SAMPLE_PATH_ABS = os.path.join(os.getcwd(), SAMPLE_PATH)
 
@@ -60,6 +60,20 @@ DEFAULT_SAMPLE = {
 }
 
 SUPPORTED_SAMPLE_EXTS = ('.wav',)
+
+DEFAULT_INTERPRETER_CONFIG = {
+    "cwd": ".",
+    "cmd": "{}",
+    "eval_fmt": "{}\n",
+    "hush": "",
+    "preloads": [],
+    "servers": [],
+    "intro": ['Welcome!!\nThis is a collaborative window into {}\n'
+              'execute a reset() or cls() to reposition your terminal\n'
+              'close this console to reposition it.\n'
+              '-' * 51 + '\n'],
+    "path_requirements": []
+}
 
 INTERPRETER_PRESETS = {
     "foxdot": {
@@ -392,8 +406,15 @@ class Jamcord:
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.previous_sample_searches = {}
-        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
+        self.interpreters = {}
+        self._load_interpreters()
         self.pyaudio = pyaudio
+
+    def _load_interpreters(self):
+        repls = os.listdir(INTERPRETERS_PATH)
+        for f in repls:
+            repl = dataIO.load_json(os.path.join(INTERPRETERS_PATH, f))
+            self.interpreters[os.path.splitext(f)[0].lower()] = repl
 
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
@@ -655,23 +676,26 @@ class Jamcord:
         to their default settings"""
         author = ctx.message.author
 
-        keys = ", ".join(INTERPRETER_PRESETS.keys())
+        keys = INTERPRETER_PRESETS.keys()
         await self.bot.say("Are you sure you want to revert the interpreter "
-                           "settings for **{}**? (y/n)".format(keys))
+                           "settings for **{}**? (y/n)".format(", ".join(keys)))
         answer = await self.bot.wait_for_message(timeout=15, author=author)
         if not (answer and answer.content.lower() in ('y', 'yes')):
             return await self.bot.say("Ok. Won't revert.")
 
-        check_file(INTERPRETERS_PATH, INTERPRETER_PRESETS,
-                   revert_defaults=True)
+        for k in keys:
+            path = os.path.join(INTERPRETERS_PATH, k + ".json")
+            check_file(path, INTERPRETER_PRESETS[k], revert_defaults=True)
         self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
 
-        await self.bot.say("**{}** reverted to default settings".format(keys))
+        await self.bot.say("**{}** reverted to default "
+                           "settings".format(", ".join(keys)))
 
     @jamset.command(pass_context=True, name="reload")
     async def jamset_reload(self, ctx):
         """reload data from interpreters.json"""
-        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
+        check_interpreters()
+        self._load_interpreters()
         await self.bot.say("interpreters reloaded")
 
     async def start_console(self, ctx, session):
@@ -1355,7 +1379,7 @@ async def wait_for_reaction_remove(bot, emoji=None, *, user=None,
 
 
 def check_folders():
-    paths = ("data/jamcord", SAMPLE_PATH)
+    paths = ("data/jamcord", SAMPLE_PATH, INTERPRETERS_PATH)
     for path in paths:
         if not os.path.exists(path):
             print("Creating {} folder...".format(path))
@@ -1381,10 +1405,24 @@ def check_file(path, default, revert_defaults=False):
                           " field to jamcord {}".format(path))
             dataIO.save_json(path, current)
 
+def check_interpreters():
+    repls = os.listdir(INTERPRETERS_PATH)
+    repls = set(repls + [d + '.json' for d in INTERPRETER_PRESETS])
+    for f in repls:
+        name = os.path.splitext(f)[0]
+        path = os.path.join(INTERPRETERS_PATH, f)
+        if name in INTERPRETER_PRESETS:
+            check_file(path, INTERPRETER_PRESETS[name])
+            continue
+        default = deepcopy(DEFAULT_INTERPRETER_CONFIG)
+        default['cmd'] = default['cmd'].format(name)
+        default['intro'][0] = default['intro'][0].format(name)
+        check_file(path, default)
+
 def setup(bot):
     check_folders()
     check_file(SETTINGS_PATH,
                {"SAMPLES": {}, "INTERPRETER_PATHS": {"SCLANG": None}})
-    check_file(INTERPRETERS_PATH, INTERPRETER_PRESETS)
+    check_interpreters()
     n = Jamcord(bot)
     bot.add_cog(n)
