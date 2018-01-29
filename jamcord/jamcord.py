@@ -793,7 +793,13 @@ class Jamcord:
                         # allow audio device choice later if needed
                         input_device_index=audio_in['index'])
         stream = SmallerStream(stream)
-        vc.audio_player = vc.create_stream_player(stream, after=stream.stop)
+        def stop_and_leave():
+            stream.stop()
+            try:
+                self.bot.loop.create_task(server.voice_client.disconnect())
+            except AttributeError:
+                pass
+        vc.audio_player = vc.create_stream_player(stream, after=stop_and_leave)
         self.sessions[channel.id]['voice_client'] = vc
         vc.audio_player.start()
 
