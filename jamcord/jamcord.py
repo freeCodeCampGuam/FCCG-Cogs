@@ -594,22 +594,58 @@ class Jamcord:
             await send_cmd_help(ctx)
     
     @jamset.command(pass_context=True, name="path")
-    async def jamset_path(self, ctx, interpreter, *, path):
-        """set the path(s) to your interpreter(s)"""
+    async def jamset_path(self, ctx, interpreter: str=None, *, path=None):
+        """Set the path(s) to your interpreter(s).
+        These will be lowercased and allowed to be used in the
+        base and server-level cwd, cmd, and preload fields in
+        interpreter.json
+
+        * [p]jamset path by itself lists the paths set
+        * leave path empty to remove the interpreter
+        
+        Example:
+        You will likely need to set your SuperCollider path like this:
+         [p]jamset path SClang /absolute/path/to/SuperCollider/resources/
+        
+         This would allow you to use "{sclang}" in your server.cwd
+         to correctly cd into SuperCollider's binaries and
+         spin up ./sclang for each jam session
+
+        Note: If your interpreters are already in your path, just set them as their names
+        Examples: 
+         [p]jamset path foxdot FoxDot
+         [p]jamset path FoxDotPython python3
+         [p]jamset path tidal stack ghci"""
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
-        supported = ("troop",)
-        if interpreter.lower() not in supported:
-            await self.bot.say('Only these interpreters are supported atm:\n'
-                               '{}'.format(' '.join(supported)))
-            return NotImplemented
 
-        interpreter = interpreter.upper()
+        paths = self.settings["INTERPRETER_PATHS"]
 
-        self.settings["INTERPRETER_PATHS"][interpreter] = path
+        if interpreter is None:
+            fmt = "\n".join("  **{{{}}}** => `{}`".format(name, path)
+                            for name, path in paths.items())
+            return await self.bot.say("Paths set:\n" + fmt)
+
+        interpreter = interpreter.lower()
+
+        if path is None:
+            if interpreter not in paths:
+                await self.bot.say("{} path not yet set."
+                                   "\nUse `{}jamset path` to find out how to "
+                                   "set it.".format(interpreter, ctx.prefix))
+                return
+            del paths[interpreter]
+            await self.bot.say(interpreter + "'s path has been removed from the bot")
+            return
+
+        paths[interpreter] = path
         self._save()
-        await self.bot.say(interpreter + " path updated to: " + path +
+        await self.bot.say("{0} path is now {1}\n"
+                           "it can now be accessed via {{{0}}} "
+                           "on interpreter setup".format(interpreter, path))
+
+
                            "\n`" + ctx.prefix + "reload jamcord` to take effect.")
 
     async def start_console(self, ctx, session):
