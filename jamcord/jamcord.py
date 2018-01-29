@@ -30,7 +30,6 @@ INTERPRETERS_PATH = "data/jamcord/interpreters.json"
 SAMPLE_PATH = 'data/jamcord/samples/'
 SAMPLE_PATH_ABS = os.path.join(os.getcwd(), SAMPLE_PATH)
 
-USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
 
 youtube_dl_options = {
@@ -1014,43 +1013,60 @@ class Jamcord:
         channel = ctx.message.channel
         author = ctx.message.author
 
+        # interpreter don't exist
         kind = kind.lower()
-        try:
-            Interpreter = self.interpreters[kind]['class']
-        except KeyError:
-            await self.bot.say('Only FoxDot and Tidal interpreters available '
-                               '(use `stack` if you use stack for your Tidal)')
+        if kind not in self.interpreters:
+            await self.bot.say("{} is not an available interpreter.\n"
+                               "You could add it in interpreters.json")
             return
 
-        if Interpreter is None:
-            await self.bot.say("Troop hasn't been installed or the path hasn't "
-                               "been setup yet. Use `{}jamset path troop "
-                               "<path>` to add it.".format(ctx.prefix))
+        # missing path reqs
+        missing = self.missing_interpreter_reqs(kind)
+        if missing:
+            await self.bot.say("Requirements not met.\n"
+                               "You will need to use `{}jamset path` "
+                               "to set up paths for {}"
+                               "".format(ctx.prefix, ", ".join(missing)))
             return
 
-        intro = self.interpreters[kind]['intro'].copy()
-        hush = self.interpreters[kind]['hush']
-        preloads = self.interpreters[kind]['preloads']
+        repl_data = deepcopy(self.interpreters[kind])
+
+        # format paths
+        servers = []
+        for s in repl_data['servers']:
+            s['cwd'] = self.format_paths(s['cwd'])
+            s['cmd'] = self.format_paths(s['cmd'])
+            s['preloads'] = [self.format_paths(p) for p in s['preloads']]
+            servers.append(s)
+
+        cwd = self.format_paths(repl_data['cwd'])
+        cmd = self.format_paths(repl_data['cmd'])
+        preloads = [self.format_paths(p) for p in repl_data['preloads']]
 
         if channel.id in self.sessions:
             await self.bot.say("Already running a jam session in this channel")
             return
 
+        repl = InterpreterWithServers(self.bot.loop, cwd, cmd,
+                                      eval_fmt=repl_data['eval_fmt'],
+                                      preloads=preloads,
+                                      servers=servers)
+
         self.sessions[channel.id] = {
             'authors' : {},
-            'output'  : intro,
+            'output'  : repl_data['intro'],
             'console' : None,
             'pages'   : [],
             'page_num': 0,
             'pager_task': None,
             'console-less': not console,
-            'repl'    : None,
+            'repl'    : repl,
             'active'  : True,
             'click_wait': None,
             'update_console': False,
             'clean_after': clean,
-            'interpreter': Interpreter,
-            'hush': hush,
+            'interpreter': kind,
+            'hush': repl_data['hush'],
             'voice_client': None
         }
 
@@ -1064,17 +1080,19 @@ class Jamcord:
 
         session['pages'].append(self.pager(session)())
 
-        session['repl'] = Interpreter()
-
-        for load in preloads:
-            session['repl'].evaluate(load)
-
-        await self.bot.say('psst, head into the voice channel')
 
         if not session['console-less']:
             session['pager_task'] = await self.start_console(ctx, session)
 
             self.bot.loop.create_task(self.keep_console_updated(ctx, session))
+
+
+        msg = await self.bot.say('loading..')
+
+        while not repl.ready:
+            await asyncio.sleep(.5)
+
+        await self.bot.edit_message(msg, new_content='psst, head into the voice channel')
 
         while session['active']:
 
@@ -1108,40 +1126,14 @@ class Jamcord:
             if cleaned == '.':
                 cleaned = session['hush']
 
+            with_author = ['{}: {}'.format(jammer.display_name, ln) 
+                           for ln in cleaned.split('\n')]
+            fmt = '\n'.join(with_author)
 
-            fmt = None
-            stdout = io.StringIO()
-            try:
-                # foxdot must have turned off output to stdout recently
-                with redirect_stdout(stdout):
-                    result = session['repl'].evaluate(cleaned)
-            except Exception as e:
-                value = stdout.getvalue()
-                fmt = '{}{}'.format(value, traceback.format_exc())
-            else:
-                value = stdout.getvalue()
-                if value:
-                    try:
-                        value = re.sub(USER_SPOT, jammer.display_name, value)
-                    except AttributeError:
-                        pass
-                if result is not None:
-                    fmt = '{}{}'.format(value, result)
-                elif value:
-                    fmt = '{}'.format(value)
-                else:
-                    clean_lines = cleaned.split('\n')
-                    with_author = ['{}: {}'.format(jammer.display_name, ln) 
-                                   for ln in clean_lines]
-                    fmt = '\n'.join(with_author)
-            if fmt is None:
-                continue
-
-            if fmt == 'None':
-                session['output'].append('\n')
-            else:
-                session['output'].append(fmt)
+            session['output'].append(fmt)
             session['page_num'] = -1
+
+            repl.eval(cleaned)
 
             # ensure console update
             session['update_console'] = True
@@ -1152,7 +1144,11 @@ class Jamcord:
     async def keep_console_updated(self, ctx, session):
         channel = ctx.message.channel
         while session['active']:
-            if not session['update_console']:
+            output = session['repl'].read().strip()
+            if output:
+                session['output'].append(output)
+                session['page_num'] = -1
+            if not session['update_console'] and not output:
                 await asyncio.sleep(.5)
                 continue
             try:
