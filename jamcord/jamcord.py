@@ -61,6 +61,63 @@ DEFAULT_SAMPLE = {
 
 SUPPORTED_SAMPLE_EXTS = ('.wav',)
 
+INTERPRETER_PRESETS = {
+    "foxdot": {
+        "cwd": ".",
+        "cmd": "{foxdotpython} -m {foxdot} --pipe",
+        "eval_fmt": "{}\n\n",
+        "hush": "Clock.clear()",
+        "preloads": ['Samples.addPath("{samples}")'],
+        "servers": [{
+            "print": False,
+            "cwd": "{sclang}",
+            "cmd": "./sclang",
+            "preloads": ["Server.killAll\n", "FoxDot.start\n"],
+            "wait": 3
+        }],
+        "intro": [
+            'Welcome!!\nThis is a collaborative window into FoxDot\n'
+            ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
+            ' p2 >> play("(xo){[--]-}")\n'
+            'execute a reset() or cls() to reposition your terminal\n'
+            'execute a . to stop all sound\n'
+            '[p]jam help foxdot for more on FoxDot!\n'
+            'close this console to reposition it also\n' + '-' * 51 + '\n'
+        ],
+        "path_requirements": ["sclang", "foxdot", "foxdotpython"]
+    },
+    "tidal": {
+        "cwd": ".",
+        "cmd": "{tidal}",
+        "eval_fmt": ":{{\n{}\n:}}\n",  # for multipe lines
+        "hush": "hush",
+        "preloads": [
+            "import Sound.Tidal.Context",
+            ":set -XOverloadedStrings",
+            "(cps, getNow) <- bpsUtils"] +
+            ["(d{}, t{}) <- superDirtSetters getNow".format(n, n)
+             for n in range(1, 10)] +
+            ["let hush = mapM ($ silence) [d1,d2,d3,d4,d5,d6,d7,d8,d9]"],
+        "servers": [{
+            "print": False,
+            "cwd": "{sclang}",
+            "cmd": "./sclang",
+            "preloads": ["Server.killAll\n", "SuperDirt.start\n"],
+            "wait": 3
+        }],
+        "intro": [
+            'Welcome!!\nThis is a collaborative window into TidalCycles\n'
+            ' I have no idea how to use Tidal!\n'
+            ' eeeuhhhhhh tidal example\n'
+            'execute a `reset` or `cls` to reposition your terminal\n'
+            'execute a `.` to stop all sound\n'
+            '[p]jam help tidal for more on TidalCycles!\n'
+            'close this console to reposition it also\n' + '-' * 51 + '\n'
+        ],
+        "path_requirements": ["sclang", "tidal"]
+    }
+}
+
 
 # TODO: rewrite that whole pager nonsense
 # x: reaction remove fix
