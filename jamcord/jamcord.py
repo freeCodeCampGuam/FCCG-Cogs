@@ -400,6 +400,10 @@ class Jamcord:
         fmt.replace('{samples}', SAMPLE_PATH_ABS)
         return fmt
 
+    def missing_interpreter_reqs(self, kind):
+        reqs = self.interpreters[kind]['path_requirements']
+        paths = self.settings["INTERPRETER_PATHS"]
+        return set(reqs).difference(paths)
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
