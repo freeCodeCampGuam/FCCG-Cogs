@@ -586,6 +586,7 @@ class Jamcord:
         self._save()
         await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
+    @checks.is_owner()
     @commands.group(pass_context=True)
     async def jamset(self, ctx):
         """settings for jams"""
