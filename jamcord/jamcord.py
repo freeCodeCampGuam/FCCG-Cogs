@@ -3,17 +3,16 @@ from discord.ext import commands
 from cogs.utils import checks
 from cogs.utils.dataIO import dataIO
 from cogs.utils.chat_formatting import pagify
-import traceback
 from contextlib import redirect_stdout
-import io
 import re
-import sys
 import asyncio
 import youtube_dl
 import threading
 import os
+import subprocess
 from glob import glob
-from collections import deque
+from queue import Queue, Empty
+import time
 from urllib.parse import urlparse
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
@@ -27,9 +26,10 @@ except:
 
 
 SETTINGS_PATH = "data/jamcord/settings.json"
+INTERPRETERS_PATH = "data/jamcord/interpreters.json"
 SAMPLE_PATH = 'data/jamcord/samples/'
+SAMPLE_PATH_ABS = os.path.join(os.getcwd(), SAMPLE_PATH)
 
-USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
 
 youtube_dl_options = {
@@ -61,6 +61,63 @@ DEFAULT_SAMPLE = {
 
 SUPPORTED_SAMPLE_EXTS = ('.wav',)
 
+INTERPRETER_PRESETS = {
+    "foxdot": {
+        "cwd": ".",
+        "cmd": "{foxdotpython} -m {foxdot} --pipe",
+        "eval_fmt": "{}\n\n",
+        "hush": "Clock.clear()",
+        "preloads": ['Samples.addPath("{samples}")'],
+        "servers": [{
+            "print": False,
+            "cwd": "{sclang}",
+            "cmd": "./sclang",
+            "preloads": ["Server.killAll\n", "FoxDot.start\n"],
+            "wait": 3
+        }],
+        "intro": [
+            'Welcome!!\nThis is a collaborative window into FoxDot\n'
+            ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
+            ' p2 >> play("(xo){[--]-}")\n'
+            'execute a reset() or cls() to reposition your terminal\n'
+            'execute a . to stop all sound\n'
+            '[p]jam help foxdot for more on FoxDot!\n'
+            'close this console to reposition it also\n' + '-' * 51 + '\n'
+        ],
+        "path_requirements": ["sclang", "foxdot", "foxdotpython"]
+    },
+    "tidal": {
+        "cwd": ".",
+        "cmd": "{tidal}",
+        "eval_fmt": ":{{\n{}\n:}}\n",  # for multipe lines
+        "hush": "hush",
+        "preloads": [
+            "import Sound.Tidal.Context",
+            ":set -XOverloadedStrings",
+            "(cps, getNow) <- bpsUtils"] +
+            ["(d{}, t{}) <- superDirtSetters getNow".format(n, n)
+             for n in range(1, 10)] +
+            ["let hush = mapM ($ silence) [d1,d2,d3,d4,d5,d6,d7,d8,d9]"],
+        "servers": [{
+            "print": False,
+            "cwd": "{sclang}",
+            "cmd": "./sclang",
+            "preloads": ["Server.killAll\n", "SuperDirt.start\n"],
+            "wait": 3
+        }],
+        "intro": [
+            'Welcome!!\nThis is a collaborative window into TidalCycles\n'
+            ' I have no idea how to use Tidal!\n'
+            ' eeeuhhhhhh tidal example\n'
+            'execute a `reset` or `cls` to reposition your terminal\n'
+            'execute a `.` to stop all sound\n'
+            '[p]jam help tidal for more on TidalCycles!\n'
+            'close this console to reposition it also\n' + '-' * 51 + '\n'
+        ],
+        "path_requirements": ["sclang", "tidal"]
+    }
+}
+
 
 # TODO: rewrite that whole pager nonsense
 # x: reaction remove fix
@@ -82,12 +139,17 @@ SUPPORTED_SAMPLE_EXTS = ('.wav',)
 # x: display "user: input" if no stdout / result
 # x: add a way for users to send permanent msgs if in cleanup mode
 # TODO: @mention users if error. (if interpreter-specific regex is matched?)
+# TODO: split interpreter config in own files
+#   data/jamcord/interpreters/
+#       foxdot.json
+#       tidal.json
+# TODO: write generic socket repl for Extempore and like envs
 
 
 _reaction_remove_events = set()
 
 
-# TODO
+# heavily based on Troop's interpreter
 class Interpreter():
     """Replace Troop w/ a general purpose cmd line 
     livecoding env communication thingamajig.
@@ -95,7 +157,93 @@ class Interpreter():
     add subclasses for specifics needed. 
     maybe move all that self.interpreter stuff into those
     """
-    NotImplemented
+
+    def __init__(self, cwd, command, eval_fmt="{}\n", preloads=[], readable=True):
+        self.ready = False
+        self.command = command
+        self.cwd = cwd
+        self.eval_fmt = eval_fmt.format
+        self.preloads = preloads
+        self.output_q = Queue()
+        self.done = False
+        self.cli = subprocess.Popen(self.command, shell=True,
+                                    universal_newlines=True,
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.PIPE,
+                                    cwd=self.cwd)
+        for l in self.preloads:
+            self.eval(l)
+        self.readable = readable
+        self.ready = True
+        if readable:
+            self.output_thread = threading.Thread(target=self._watch_output)
+            self.output_thread.start()
+
+    def is_alive(self):
+        if self.cli is None or self.cli.returncode is not None or self.done:
+            return False
+        return True
+
+    def _watch_output(self):
+        while self.is_alive():
+            time.sleep(.1)
+            try:
+                for line in iter(self.cli.stdout.readline, ""):
+                    self.output_q.put(line)
+            except ValueError:  # closed file
+                continue
+
+    def eval(self, string):
+        self.cli.stdin.write(self.eval_fmt(string))
+        self.cli.stdin.flush()
+
+    def read(self):
+        result = []
+        while True:
+            try:
+                result.append(self.output_q.get_nowait())
+            except Empty:
+                return "\n".join(result)
+
+    def kill(self):
+        threading.Thread(target=self._block_kill).start()
+
+    def _block_kill(self):
+        self.cli.communicate()
+        self.cli.kill()
+
+
+# hmm...
+class InterpreterWithServers(Interpreter):
+    """just to consolidate interpreter heirarchies"""
+
+    def __init__(self, loop, cwd, command, eval_fmt="{}\n", preloads=[],
+                 readable=True, servers=[]):
+        self.ready = False
+        self.servers = []
+        loop.create_task(self._start(cwd, command, eval_fmt, preloads, servers))
+
+    async def _start(self, cwd, command, eval_fmt, preloads, servers):
+        for s in servers:
+            self.servers.append(Interpreter(s['cwd'], s['cmd'], eval_fmt='{}',
+                                            preloads=s['preloads'],
+                                            readable=s['print']))
+            await asyncio.sleep(s['wait'])
+        super().__init__(cwd, command, eval_fmt, preloads)
+
+    def kill(self):
+        super().kill()
+        for s in self.servers:
+            s.kill()
+
+    def read(self):
+        result = []
+        for s in self.servers:
+            if s.readable:
+                result.append(s.read())
+        result.append(super().read())
+        return "\n".join(result)
 
 
 # TODO
@@ -244,62 +392,22 @@ class Jamcord:
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.previous_sample_searches = {}
-        self.interpreters = self._get_interpreter_data(self.settings['INTERPRETER_PATHS'])
+        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
         self.pyaudio = pyaudio
-
-    def _get_interpreter_data(self, paths):
-        # load interpreter paths into sys.path
-        for path in paths.values():
-            if path is not None and path not in sys.path:
-                sys.path.insert(0, path)
-        # TODO: move importing to instantiation per session
-        # Troop
-        try:
-            from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
-        except:
-            FoxDotInterpreter = None
-            TidalInterpreter = None
-            StackTidalInterpreter = None
-
-        interpreters = {
-            'foxdot': {'class': FoxDotInterpreter,
-                'intro': [
-                    'Welcome!!\nThis is a collaborative window into FoxDot\n'
-                    ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
-                    ' p2 >> play("(xo){[--]-}")\n'
-                    'execute a reset() or cls() to reposition your terminal\n'
-                    'execute a . to stop all sound\n'
-                    '[p]jam help foxdot for more on FoxDot!\n'
-                    'close this console to reposition it also\n' + '-' * 51 + '\n'
-                ],
-                'hush': 'Clock.clear()',
-                'preloads': [
-                    'Samples.addPath("{}")'.format(os.path.join(os.getcwd(),
-                                                                SAMPLE_PATH))
-                ]
-            },
-            'tidal': {'class': TidalInterpreter,
-                'intro': [
-                    'Welcome!!\nThis is a collaborative window into TidalCycles\n'
-                    ' I have no idea how to use Tidal!\n'
-                    ' eeeuhhhhhh tidal example\n'
-                    'execute a `reset` or `cls` to reposition your terminal\n'
-                    'execute a `.` to stop all sound\n'
-                    '[p]jam help tidal for more on TidalCycles!\n'
-                    'close this console to reposition it also\n' + '-' * 51 + '\n'
-                ],
-                'hush': 'hush',
-                'preloads': []
-            }
-        }
-        interpreters['stack'] = {'class'   : StackTidalInterpreter,
-                                 'intro'   : interpreters['tidal']['intro'],
-                                 'hush'    : interpreters['tidal']['hush'],
-                                 'preloads': interpreters['tidal']['preloads']}
-        return interpreters
 
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
+
+    def format_paths(self, fmt):
+        for name, path in self.settings["INTERPRETER_PATHS"].items():
+            fmt = fmt.replace('{' + name + '}', path)
+        fmt.replace('{samples}', SAMPLE_PATH_ABS)
+        return fmt
+
+    def missing_interpreter_reqs(self, kind):
+        reqs = self.interpreters[kind]['path_requirements']
+        paths = self.settings["INTERPRETER_PATHS"]
+        return set(reqs).difference(paths)
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
@@ -482,6 +590,7 @@ class Jamcord:
         self._save()
         await self.bot.say(name + ' downloaded to ' + SAMPLE_PATH + name + '.wav')
 
+    @checks.is_owner()
     @commands.group(pass_context=True)
     async def jamset(self, ctx):
         """settings for jams"""
@@ -489,23 +598,81 @@ class Jamcord:
             await send_cmd_help(ctx)
     
     @jamset.command(pass_context=True, name="path")
-    async def jamset_path(self, ctx, interpreter, *, path):
-        """set the path(s) to your interpreter(s)"""
+    async def jamset_path(self, ctx, interpreter: str=None, *, path=None):
+        """Set the path(s) to your interpreter(s).
+        These will be lowercased and allowed to be used in the
+        base and server-level cwd, cmd, and preload fields in
+        interpreter.json
+
+        * [p]jamset path by itself lists the paths set
+        * leave path empty to remove the interpreter
+        
+        Example:
+        You will likely need to set your SuperCollider path like this:
+         [p]jamset path SClang /absolute/path/to/SuperCollider/resources/
+        
+         This would allow you to use "{sclang}" in your server.cwd
+         to correctly cd into SuperCollider's binaries and
+         spin up ./sclang for each jam session
+
+        Note: If your interpreters are already in your path, just set them as their names
+        Examples: 
+         [p]jamset path foxdot FoxDot
+         [p]jamset path FoxDotPython python3
+         [p]jamset path tidal stack ghci"""
         server = ctx.message.server
         channel = ctx.message.channel
         author = ctx.message.author
-        supported = ("troop",)
-        if interpreter.lower() not in supported:
-            await self.bot.say('Only these interpreters are supported atm:\n'
-                               '{}'.format(' '.join(supported)))
-            return NotImplemented
 
-        interpreter = interpreter.upper()
+        paths = self.settings["INTERPRETER_PATHS"]
 
-        self.settings["INTERPRETER_PATHS"][interpreter] = path
+        if interpreter is None:
+            fmt = "\n".join("  **{{{}}}** => `{}`".format(name, path)
+                            for name, path in paths.items())
+            return await self.bot.say("Paths set:\n" + fmt)
+
+        interpreter = interpreter.lower()
+
+        if path is None:
+            if interpreter not in paths:
+                await self.bot.say("{} path not yet set."
+                                   "\nUse `{}jamset path` to find out how to "
+                                   "set it.".format(interpreter, ctx.prefix))
+                return
+            del paths[interpreter]
+            await self.bot.say(interpreter + "'s path has been removed from the bot")
+            return
+
+        paths[interpreter] = path
         self._save()
-        await self.bot.say(interpreter + " path updated to: " + path +
-                           "\n`" + ctx.prefix + "reload jamcord` to take effect.")
+        await self.bot.say("{0} path is now {1}\n"
+                           "it can now be accessed via {{{0}}} "
+                           "on interpreter setup".format(interpreter, path))
+
+    @jamset.command(pass_context=True, name="reset")
+    async def jamset_reset(self, ctx):
+        """revert the default interpreters in interpreters.json
+        to their default settings"""
+        author = ctx.message.author
+
+        keys = ", ".join(INTERPRETER_PRESETS.keys())
+        await self.bot.say("Are you sure you want to revert the interpreter "
+                           "settings for **{}**? (y/n)".format(keys))
+        answer = await self.bot.wait_for_message(timeout=15, author=author)
+        if not (answer and answer.content.lower() in ('y', 'yes')):
+            return await self.bot.say("Ok. Won't revert.")
+
+        check_file(INTERPRETERS_PATH, INTERPRETER_PRESETS,
+                   revert_defaults=True)
+        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
+
+        await self.bot.say("**{}** reverted to default settings".format(keys))
+
+    @jamset.command(pass_context=True, name="reload")
+    async def jamset_reload(self, ctx):
+        """reload data from interpreters.json"""
+        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
+        await self.bot.say("interpreters reloaded")
 
     async def start_console(self, ctx, session):
         server = ctx.message.server
@@ -629,7 +796,6 @@ class Jamcord:
         vc.audio_player = vc.create_stream_player(stream, after=stream.stop)
         self.sessions[channel.id]['voice_client'] = vc
         vc.audio_player.start()
-
 
     @jam.command(pass_context=True, name="setup", no_pm=True)
     async def jam_setup(self, ctx):
@@ -759,7 +925,7 @@ class Jamcord:
             return await self.bot.say('There is no jam session in this channel')
         if seconds == -1:
             return await self.bot.say('will not clean new messages')
-        await self.bot.say('will clean new messages after {} seconds')
+        await self.bot.say('will clean new messages after {} seconds'.format(seconds))
 
     @checks.is_owner()
     @jam.command(pass_context=True, name="invite", no_pm=True)
@@ -833,8 +999,8 @@ class Jamcord:
         self.sessions[channel.id]['click_wait'].cancel()
 
     @jam.command(pass_context=True, no_pm=True, name="on")
-    async def jam_on(self, ctx, kind: str='FoxDot', 
-                        console: bool=True, clean: int=-1):
+    async def jam_on(self, ctx, kind: str='FoxDot',
+                     console: bool=True, clean: int=-1):
         """start up a collab LiveCoding session
         set the console off if you're joining someone else's jam
 
@@ -852,43 +1018,60 @@ class Jamcord:
         channel = ctx.message.channel
         author = ctx.message.author
 
+        # interpreter don't exist
         kind = kind.lower()
-        try:
-            Interpreter = self.interpreters[kind]['class']
-        except KeyError:
-            await self.bot.say('Only FoxDot and Tidal interpreters available '
-                               '(use `stack` if you use stack for your Tidal)')
+        if kind not in self.interpreters:
+            await self.bot.say("{} is not an available interpreter.\n"
+                               "You could add it in interpreters.json")
             return
 
-        if Interpreter is None:
-            await self.bot.say("Troop hasn't been installed or the path hasn't "
-                               "been setup yet. Use `{}jamset path troop "
-                               "<path>` to add it.".format(ctx.prefix))
+        # missing path reqs
+        missing = self.missing_interpreter_reqs(kind)
+        if missing:
+            await self.bot.say("Requirements not met.\n"
+                               "You will need to use `{}jamset path` "
+                               "to set up paths for {}"
+                               "".format(ctx.prefix, ", ".join(missing)))
             return
 
-        intro = self.interpreters[kind]['intro'].copy()
-        hush = self.interpreters[kind]['hush']
-        preloads = self.interpreters[kind]['preloads']
+        repl_data = deepcopy(self.interpreters[kind])
+
+        # format paths
+        servers = []
+        for s in repl_data['servers']:
+            s['cwd'] = self.format_paths(s['cwd'])
+            s['cmd'] = self.format_paths(s['cmd'])
+            s['preloads'] = [self.format_paths(p) for p in s['preloads']]
+            servers.append(s)
+
+        cwd = self.format_paths(repl_data['cwd'])
+        cmd = self.format_paths(repl_data['cmd'])
+        preloads = [self.format_paths(p) for p in repl_data['preloads']]
 
         if channel.id in self.sessions:
             await self.bot.say("Already running a jam session in this channel")
             return
 
+        repl = InterpreterWithServers(self.bot.loop, cwd, cmd,
+                                      eval_fmt=repl_data['eval_fmt'],
+                                      preloads=preloads,
+                                      servers=servers)
+
         self.sessions[channel.id] = {
             'authors' : {},
-            'output'  : intro,
+            'output'  : repl_data['intro'],
             'console' : None,
             'pages'   : [],
             'page_num': 0,
             'pager_task': None,
             'console-less': not console,
-            'repl'    : None,
+            'repl'    : repl,
             'active'  : True,
             'click_wait': None,
             'update_console': False,
             'clean_after': clean,
-            'interpreter': Interpreter,
-            'hush': hush,
+            'interpreter': kind,
+            'hush': repl_data['hush'],
             'voice_client': None
         }
 
@@ -902,17 +1085,19 @@ class Jamcord:
 
         session['pages'].append(self.pager(session)())
 
-        session['repl'] = Interpreter()
-
-        for load in preloads:
-            session['repl'].evaluate(load)
-
-        await self.bot.say('psst, head into the voice channel')
 
         if not session['console-less']:
             session['pager_task'] = await self.start_console(ctx, session)
 
             self.bot.loop.create_task(self.keep_console_updated(ctx, session))
+
+
+        msg = await self.bot.say('loading..')
+
+        while not repl.ready:
+            await asyncio.sleep(.5)
+
+        await self.bot.edit_message(msg, new_content='psst, head into the voice channel')
 
         while session['active']:
 
@@ -946,40 +1131,14 @@ class Jamcord:
             if cleaned == '.':
                 cleaned = session['hush']
 
+            with_author = ['{}: {}'.format(jammer.display_name, ln) 
+                           for ln in cleaned.split('\n')]
+            fmt = '\n'.join(with_author)
 
-            fmt = None
-            stdout = io.StringIO()
-            try:
-                # foxdot must have turned off output to stdout recently
-                with redirect_stdout(stdout):
-                    result = session['repl'].evaluate(cleaned)
-            except Exception as e:
-                value = stdout.getvalue()
-                fmt = '{}{}'.format(value, traceback.format_exc())
-            else:
-                value = stdout.getvalue()
-                if value:
-                    try:
-                        value = re.sub(USER_SPOT, jammer.display_name, value)
-                    except AttributeError:
-                        pass
-                if result is not None:
-                    fmt = '{}{}'.format(value, result)
-                elif value:
-                    fmt = '{}'.format(value)
-                else:
-                    clean_lines = cleaned.split('\n')
-                    with_author = ['{}: {}'.format(jammer.display_name, ln) 
-                                   for ln in clean_lines]
-                    fmt = '\n'.join(with_author)
-            if fmt is None:
-                continue
-
-            if fmt == 'None':
-                session['output'].append('\n')
-            else:
-                session['output'].append(fmt)
+            session['output'].append(fmt)
             session['page_num'] = -1
+
+            repl.eval(cleaned)
 
             # ensure console update
             session['update_console'] = True
@@ -990,7 +1149,11 @@ class Jamcord:
     async def keep_console_updated(self, ctx, session):
         channel = ctx.message.channel
         while session['active']:
-            if not session['update_console']:
+            output = session['repl'].read().strip()
+            if output:
+                session['output'].append(output)
+                session['page_num'] = -1
+            if not session['update_console'] and not output:
                 await asyncio.sleep(.5)
                 continue
             try:
@@ -1192,25 +1355,30 @@ def check_folders():
             print("Creating {} folder...".format(path))
             os.makedirs(path)
 
-def check_files():
-    default = {"SAMPLES": {}, "INTERPRETER_PATHS": {"TROOP": None}}
-
-    if not dataIO.is_valid_json(SETTINGS_PATH):
-        print("Creating default jamcord settings.json...")
-        dataIO.save_json(SETTINGS_PATH, default)
+def check_file(path, default, revert_defaults=False):
+    if not dataIO.is_valid_json(path):
+        print("Creating default jamcord {}...".format(path))
+        dataIO.save_json(path, default)
+    elif revert_defaults:
+        current = dataIO.load_json(path)
+        current.update(default)
+        print("Reverting {} in {} to default values"
+              "".format(", ".join(default.keys()), path))
+        dataIO.save_json(path, current)
     else:  # consistency check
-        current = dataIO.load_json(SETTINGS_PATH)
+        current = dataIO.load_json(path)
         if current.keys() != default.keys():
             for key in default.keys():
                 if key not in current.keys():
                     current[key] = default[key]
-                    print(
-                        "Adding " + str(key) + " field to jamcord settings.json")
-            dataIO.save_json(SETTINGS_PATH, current)
-
+                    print("Adding " + str(key) +
+                          " field to jamcord {}".format(path))
+            dataIO.save_json(path, current)
 
 def setup(bot):
     check_folders()
-    check_files()
+    check_file(SETTINGS_PATH,
+               {"SAMPLES": {}, "INTERPRETER_PATHS": {"SCLANG": None}})
+    check_file(INTERPRETERS_PATH, INTERPRETER_PRESETS)
     n = Jamcord(bot)
     bot.add_cog(n)
