@@ -28,6 +28,7 @@ except:
 SETTINGS_PATH = "data/jamcord/settings.json"
 INTERPRETERS_PATH = "data/jamcord/interpreters.json"
 SAMPLE_PATH = 'data/jamcord/samples/'
+SAMPLE_PATH_ABS = os.path.join(os.getcwd(), SAMPLE_PATH)
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
 NBS = '​'
@@ -392,6 +393,13 @@ class Jamcord:
 
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
+
+    def format_paths(self, fmt):
+        for name, path in self.settings["INTERPRETER_PATHS"].items():
+            fmt = fmt.replace('{' + name + '}', path)
+        fmt.replace('{samples}', SAMPLE_PATH_ABS)
+        return fmt
+
 
     def cleanup_code(self, content):
         """Automatically removes code blocks from the code."""
