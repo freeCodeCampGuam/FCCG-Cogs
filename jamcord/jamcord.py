@@ -27,6 +27,7 @@ except:
 
 
 SETTINGS_PATH = "data/jamcord/settings.json"
+INTERPRETERS_PATH = "data/jamcord/interpreters.json"
 SAMPLE_PATH = 'data/jamcord/samples/'
 
 USER_SPOT = re.compile(r'<colour=\".*?\">.*</colour>')
@@ -387,59 +388,8 @@ class Jamcord:
         self.repl_settings = {'REPL_PREFIX': ['`']}
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.previous_sample_searches = {}
-        self.interpreters = self._get_interpreter_data(self.settings['INTERPRETER_PATHS'])
+        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
         self.pyaudio = pyaudio
-
-    def _get_interpreter_data(self, paths):
-        # load interpreter paths into sys.path
-        for path in paths.values():
-            if path is not None and path not in sys.path:
-                sys.path.insert(0, path)
-        # TODO: move importing to instantiation per session
-        # Troop
-        try:
-            from src.interpreter import FoxDotInterpreter, TidalInterpreter, StackTidalInterpreter
-        except:
-            FoxDotInterpreter = None
-            TidalInterpreter = None
-            StackTidalInterpreter = None
-
-        interpreters = {
-            'foxdot': {'class': FoxDotInterpreter,
-                'intro': [
-                    'Welcome!!\nThis is a collaborative window into FoxDot\n'
-                    ' p1 >> piano([0,[-1, 1],(2, 4)])\n'
-                    ' p2 >> play("(xo){[--]-}")\n'
-                    'execute a reset() or cls() to reposition your terminal\n'
-                    'execute a . to stop all sound\n'
-                    '[p]jam help foxdot for more on FoxDot!\n'
-                    'close this console to reposition it also\n' + '-' * 51 + '\n'
-                ],
-                'hush': 'Clock.clear()',
-                'preloads': [
-                    'Samples.addPath("{}")'.format(os.path.join(os.getcwd(),
-                                                                SAMPLE_PATH))
-                ]
-            },
-            'tidal': {'class': TidalInterpreter,
-                'intro': [
-                    'Welcome!!\nThis is a collaborative window into TidalCycles\n'
-                    ' I have no idea how to use Tidal!\n'
-                    ' eeeuhhhhhh tidal example\n'
-                    'execute a `reset` or `cls` to reposition your terminal\n'
-                    'execute a `.` to stop all sound\n'
-                    '[p]jam help tidal for more on TidalCycles!\n'
-                    'close this console to reposition it also\n' + '-' * 51 + '\n'
-                ],
-                'hush': 'hush',
-                'preloads': []
-            }
-        }
-        interpreters['stack'] = {'class'   : StackTidalInterpreter,
-                                 'intro'   : interpreters['tidal']['intro'],
-                                 'hush'    : interpreters['tidal']['hush'],
-                                 'preloads': interpreters['tidal']['preloads']}
-        return interpreters
 
     def _save(self):
         dataIO.save_json(SETTINGS_PATH, self.settings)
@@ -1335,25 +1285,30 @@ def check_folders():
             print("Creating {} folder...".format(path))
             os.makedirs(path)
 
-def check_files():
-    default = {"SAMPLES": {}, "INTERPRETER_PATHS": {"TROOP": None}}
-
-    if not dataIO.is_valid_json(SETTINGS_PATH):
-        print("Creating default jamcord settings.json...")
-        dataIO.save_json(SETTINGS_PATH, default)
+def check_file(path, default, revert_defaults=False):
+    if not dataIO.is_valid_json(path):
+        print("Creating default jamcord {}...".format(path))
+        dataIO.save_json(path, default)
+    elif revert_defaults:
+        current = dataIO.load_json(path)
+        current.update(default)
+        print("Reverting {} in {} to default values"
+              "".format(", ".join(default.keys()), path))
+        dataIO.save_json(path, current)
     else:  # consistency check
-        current = dataIO.load_json(SETTINGS_PATH)
+        current = dataIO.load_json(path)
         if current.keys() != default.keys():
             for key in default.keys():
                 if key not in current.keys():
                     current[key] = default[key]
-                    print(
-                        "Adding " + str(key) + " field to jamcord settings.json")
-            dataIO.save_json(SETTINGS_PATH, current)
-
+                    print("Adding " + str(key) +
+                          " field to jamcord {}".format(path))
+            dataIO.save_json(path, current)
 
 def setup(bot):
     check_folders()
-    check_files()
+    check_file(SETTINGS_PATH,
+               {"SAMPLES": {}, "INTERPRETER_PATHS": {"SCLANG": None}})
+    check_file(INTERPRETERS_PATH, INTERPRETER_PRESETS)
     n = Jamcord(bot)
     bot.add_cog(n)
