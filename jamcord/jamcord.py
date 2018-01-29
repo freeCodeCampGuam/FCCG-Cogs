@@ -645,8 +645,30 @@ class Jamcord:
                            "it can now be accessed via {{{0}}} "
                            "on interpreter setup".format(interpreter, path))
 
+    @jamset.command(pass_context=True, name="reset")
+    async def jamset_reset(self, ctx):
+        """revert the default interpreters in interpreters.json
+        to their default settings"""
+        author = ctx.message.author
 
-                           "\n`" + ctx.prefix + "reload jamcord` to take effect.")
+        keys = ", ".join(INTERPRETER_PRESETS.keys())
+        await self.bot.say("Are you sure you want to revert the interpreter "
+                           "settings for **{}**? (y/n)".format(keys))
+        answer = await self.bot.wait_for_message(timeout=15, author=author)
+        if not (answer and answer.content.lower() in ('y', 'yes')):
+            return await self.bot.say("Ok. Won't revert.")
+
+        check_file(INTERPRETERS_PATH, INTERPRETER_PRESETS,
+                   revert_defaults=True)
+        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
+
+        await self.bot.say("**{}** reverted to default settings".format(keys))
+
+    @jamset.command(pass_context=True, name="reload")
+    async def jamset_reload(self, ctx):
+        """reload data from interpreters.json"""
+        self.interpreters = dataIO.load_json(INTERPRETERS_PATH)
+        await self.bot.say("interpreters reloaded")
 
     async def start_console(self, ctx, session):
         server = ctx.message.server
