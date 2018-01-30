@@ -1055,8 +1055,9 @@ class Jamcord:
         # interpreter don't exist
         kind = kind.lower()
         if kind not in self.interpreters:
-            await self.bot.say("{} is not an available interpreter.\n"
-                               "You could add it in interpreters.json")
+            await self.bot.say("{0} is not an available interpreter.\n"
+                               "You could add it by filling out a {0}.json in "
+                               "data/interpreters".format(kind))
             return
 
         # missing path reqs
