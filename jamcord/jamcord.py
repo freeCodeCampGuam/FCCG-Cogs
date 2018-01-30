@@ -530,7 +530,7 @@ class Jamcord:
 
         """
         x: allow urls as well
-        TODO: add list option
+        x: add list option
         x: save source url/name
         TODO: more in-depth controls: delete / add to sample subfolder?
         TODO: post search result and ask for confirmation
