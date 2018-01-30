@@ -164,6 +164,9 @@ INTERPRETER_PRESETS = {
 # TODO: simplify/reoganize UI to be more user-friendly
 # TODO: add ditties feature allowing to save and return random snippets 
 #   w/ some contextual info like tags, author, date, interpreter
+# TODO: add some default-filling help for servers too
+# TODO: __unload kill everything
+# TODO: out_filter? regex exclusion.. Prelude>Prelude>Prelude>Prelude>Prelude>Prelude>Prelude>
 
 
 _reaction_remove_events = set()
