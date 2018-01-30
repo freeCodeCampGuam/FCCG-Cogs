@@ -70,7 +70,7 @@ DEFAULT_INTERPRETER_CONFIG = {
     "servers": [],
     "intro": ['Welcome!!\nThis is a collaborative window into {}\n'
               'execute a reset() or cls() to reposition your terminal\n'
-              'close this console to reposition it.\n'
+              'close this console to reposition it.\n' +
               '-' * 51 + '\n'],
     "path_requirements": []
 }
