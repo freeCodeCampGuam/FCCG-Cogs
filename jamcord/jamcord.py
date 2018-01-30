@@ -524,10 +524,8 @@ class Jamcord:
         await self.bot.say(fmt)
 
     @sample.command(pass_context=True, name="add")
-    async def sample_add(self, ctx, name, *, url_or_search_terms=None):
+    async def sample_add(self, ctx, name, *, url_or_search_terms):
         """search for and download a sample from youtube
-
-        the name is used as the search parameter if none is given
 
         WIP please feel free to make PRs :)
         
@@ -550,9 +548,6 @@ class Jamcord:
         """
         author = ctx.message.author
         server = ctx.message.server
-
-        # search is name if None
-        search = url_or_search_terms or name
 
         options = youtube_dl_options.copy()
         options['outtmpl'] = SAMPLE_PATH + name + '.%(ext)s'
