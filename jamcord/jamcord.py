@@ -158,6 +158,12 @@ INTERPRETER_PRESETS = {
 #       foxdot.json
 #       tidal.json
 # TODO: write generic socket repl for Extempore and like envs
+# TODO: add hush reaction button to console
+# TODO: add a line-by-line mode instead edit-in-place terminals and console
+# TODO: add more env configs
+# TODO: simplify/reoganize UI to be more user-friendly
+# TODO: add ditties feature allowing to save and return random snippets 
+#   w/ some contextual info like tags, author, date, interpreter
 
 
 _reaction_remove_events = set()
