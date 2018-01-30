@@ -745,6 +745,15 @@ class Jamcord:
         """all your jamming needs"""
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
+            await ctx.invoke(self.jam_list)
+
+    @jam.command(pass_context=True, name="list")
+    async def jam_list(self, ctx):
+        """list the interpreters currently set up in data/interpreters
+        refresh this list with [p]jamset reload"""
+        await self.bot.say('**Interpreters set up in data/interpreters:**'
+                           '```\n{}\n```'.format(' '.join(self.interpreters)))
+        
 
     @jam.command(pass_context=True, name="bot", no_pm=True)
     async def jam_bot(self, ctx):
