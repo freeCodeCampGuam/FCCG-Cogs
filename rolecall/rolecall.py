@@ -8,7 +8,6 @@ import logging
 import os
 from copy import deepcopy
 import json
-import threading
 from random import randint
 import re
     
