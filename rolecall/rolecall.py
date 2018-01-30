@@ -379,7 +379,7 @@ class RoleCall:
         """ returns object if it exists, otherwise create the object """
         if object_type == "role":               # for roles
             role = discord.utils.get(server.roles, name=object_name)
-            try:                                #       try in case role = None
+            try:                                # try in case role = None
                 if role.name == object_name:
                     return role
             except Exception as e:              # if it is None, create new role
