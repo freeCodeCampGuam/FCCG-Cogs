@@ -144,16 +144,16 @@ INTERPRETER_PRESETS = {
 #           return self.data[self.choice(xrange(self.MAX_SIZE))]
 #       NameError: name 'xrange' is not defined
 # x: delete queue / try_delete after wait and check if session
-#   TODO: make this a setting
+#   x: make this a setting
 # x: clients / no-console mode (# of checks means how many clients connected!)
 # TODO: local execute only: keyword in msg (easier) or separate button
-# TODO: set up paths to work w/ FoxDot (and Troop if needed) in REQUIREMENTS
+# ~x: set up paths to work w/ FoxDot (and Troop if needed) in REQUIREMENTS
 # x: get tidal working
 # TODO: tidal intro text also
 # x: display "user: input" if no stdout / result
 # x: add a way for users to send permanent msgs if in cleanup mode
 # TODO: @mention users if error. (if interpreter-specific regex is matched?)
-# TODO: split interpreter config in own files
+# x: split interpreter config in own files
 #   data/jamcord/interpreters/
 #       foxdot.json
 #       tidal.json
@@ -366,7 +366,7 @@ def match_yt_url(url):
 def valid_playable_url(url):
     yt = match_yt_url(url)
     sc = match_sc_url(url)
-    if yt or sc:  # TODO: Add sc check
+    if yt or sc:
         return True
     return False
 
@@ -529,9 +529,9 @@ class Jamcord:
         """
 
         """
-        TODO: allow urls as well
+        x: allow urls as well
         TODO: add list option
-        TODO: save source url/name
+        x: save source url/name
         TODO: more in-depth controls: delete / add to sample subfolder?
         TODO: post search result and ask for confirmation
         TODO: way to sync samples across local clients
