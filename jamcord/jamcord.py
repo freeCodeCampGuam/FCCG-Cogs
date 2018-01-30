@@ -417,6 +417,7 @@ class Jamcord:
         self.pyaudio = pyaudio
 
     def _load_interpreters(self):
+        self.interpreters = {}
         repls = os.listdir(INTERPRETERS_PATH)
         for f in repls:
             repl = dataIO.load_json(os.path.join(INTERPRETERS_PATH, f))
