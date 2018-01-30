@@ -429,7 +429,7 @@ class Jamcord:
     def format_paths(self, fmt):
         for name, path in self.settings["INTERPRETER_PATHS"].items():
             fmt = fmt.replace('{' + name + '}', path)
-        fmt.replace('{samples}', SAMPLE_PATH_ABS)
+        fmt = fmt.replace('{samples}', SAMPLE_PATH_ABS)
         return fmt
 
     def missing_interpreter_reqs(self, kind):
