@@ -556,6 +556,8 @@ class Jamcord:
         path = SAMPLE_PATH + name + '.wav'
         sample_exists = os.path.exists(path)
 
+        search = url_or_search_terms
+
         # prepare url
         search = self.parse_search_or_url(search)
 
