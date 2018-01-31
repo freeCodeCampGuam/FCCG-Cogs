@@ -167,6 +167,8 @@ INTERPRETER_PRESETS = {
 # TODO: add some default-filling help for servers too
 # TODO: __unload kill everything
 # TODO: out_filter? regex exclusion.. Prelude>Prelude>Prelude>Prelude>Prelude>Prelude>Prelude>
+# TODO: containerize repls so we can let anyone spin up a session!
+#   but make sure it's super secure O.o probably should isolate the bot and use a throwaway account to be sure
 
 
 _reaction_remove_events = set()
