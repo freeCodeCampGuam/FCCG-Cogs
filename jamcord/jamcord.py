@@ -1044,6 +1044,7 @@ class Jamcord:
         self.sessions[channel.id]['active'] = False
         self.sessions[channel.id]['click_wait'].cancel()
 
+    @checks.is_owner()
     @jam.command(pass_context=True, no_pm=True, name="on")
     async def jam_on(self, ctx, kind: str='FoxDot',
                      console: bool=True, clean: int=-1):
