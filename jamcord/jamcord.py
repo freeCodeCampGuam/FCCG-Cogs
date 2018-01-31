@@ -169,6 +169,8 @@ INTERPRETER_PRESETS = {
 # TODO: out_filter? regex exclusion.. Prelude>Prelude>Prelude>Prelude>Prelude>Prelude>Prelude>
 # TODO: containerize repls so we can let anyone spin up a session!
 #   but make sure it's super secure O.o probably should isolate the bot and use a throwaway account to be sure
+# TODO: [p]jam list also show interpreters with malformatted configs?
+# TODO: allow for {samplerate}
 
 
 _reaction_remove_events = set()
@@ -396,7 +398,7 @@ class ReactionRemoveEvent(asyncio.Event):
 
 
 class Jamcord:
-    """Jamcord - A collaborative window your favorite LiveCoding environments.
+    """Jamcord - A collaborative window into your favorite LiveCoding environments.
 
     This cog, while still in alpha, lets you write music live in Discord by yourself
     or with any number of your buddies!
