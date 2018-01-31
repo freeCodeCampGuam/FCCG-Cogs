@@ -627,6 +627,7 @@ class Jamcord:
         if ctx.invoked_subcommand is None:
             await send_cmd_help(ctx)
     
+    @checks.is_owner()
     @jamset.command(pass_context=True, name="path")
     async def jamset_path(self, ctx, interpreter: str=None, *, path=None):
         """Set the path(s) to your interpreter(s).
