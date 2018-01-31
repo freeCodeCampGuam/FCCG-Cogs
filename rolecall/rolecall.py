@@ -145,14 +145,14 @@ class RoleCall:
         server = ctx.message.server
         author = ctx.message.author
 
-        # check if role was mentioned 
+        # check if role was mentioned
+        role_object = await self.get_or_create("role", role, server) 
         nums_found = re.findall('\d+', role)
         if nums_found:
             potential_role_id = nums_found[0]
             if potential_role_id in [r.id for r in server.roles]:
+                await self.bot.delete_role(server, role_object)
                 role_object = discord.utils.get(server.roles, id=potential_role_id)
-        else:
-            role_object = await self.get_or_create("role", role, server)
             
         # check if channel was mentioned
         if private_channel is None: 
