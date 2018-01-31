@@ -680,6 +680,7 @@ class Jamcord:
                            "it can now be accessed via {{{0}}} "
                            "on interpreter setup".format(interpreter, path))
 
+    @checks.is_owner()
     @jamset.command(pass_context=True, name="reset")
     async def jamset_reset(self, ctx):
         """revert the default interpreters in interpreters.json
@@ -701,6 +702,7 @@ class Jamcord:
         await self.bot.say("**{}** reverted to default "
                            "settings".format(", ".join(keys)))
 
+    @checks.is_owner()
     @jamset.command(pass_context=True, name="reload")
     async def jamset_reload(self, ctx):
         """reload data from interpreters.json"""
@@ -760,7 +762,7 @@ class Jamcord:
         await self.bot.say('**Interpreters set up in data/interpreters:**'
                            '```\n{}\n```'.format(' '.join(self.interpreters)))
         
-
+    @checks.is_owner()
     @jam.command(pass_context=True, name="bot", no_pm=True)
     async def jam_bot(self, ctx):
         """[EXPERIMENTAL] Have the bot send your default audio input to Discord
