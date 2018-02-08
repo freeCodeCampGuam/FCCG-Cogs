@@ -144,16 +144,37 @@ class RoleCall:
         """
         server = ctx.message.server
         author = ctx.message.author
+        origin_channel = ctx.message.channel
 
-        # check if role was mentioned
-        role_object = await self.get_or_create("role", role, server) 
+        # check if role was mentioned 
         nums_found = re.findall('\d+', role)
         if nums_found:
             potential_role_id = nums_found[0]
             if potential_role_id in [r.id for r in server.roles]:
-                await self.bot.delete_role(server, role_object)
                 role_object = discord.utils.get(server.roles, id=potential_role_id)
-            
+
+        # if role was not mentioned, check if the role indicated already exists
+        # if it doesn't exist, check if the bot has permissions to create a new 
+        # role before creating one
+        try:
+            role_object
+        except NameError:
+            try:
+                role_object = await self.get_or_create("role", role, server)
+            except discord.Forbidden:
+                err_msg = '❌ Your bot does not have permission to create roles'
+                await self.bot.send_message(origin_channel, content=err_msg)
+                return
+
+        # check if bot has permissions to assign a role to a user
+        if server.me.server_permissions.manage_roles and server.me.top_role \
+        > role_object:
+            pass
+        else:
+            err_msg = '❌ Your bot does not have permission to assign roles'
+            await self.bot.send_message(origin_channel, content=err_msg)
+            return
+
         # check if channel was mentioned
         if private_channel is None: 
             pass
@@ -164,14 +185,14 @@ class RoleCall:
                 potential_channel_id = nums_found[0]
                 if potential_channel_id in [c.id for c in server.channels]:
                     role_channel = self.bot.get_channel(potential_channel_id)
-
+ 
             # create the role's personal channel
             try:
                 await self.create_or_edit_role_channel(server, role_object, role_channel)
-            except Exception as e:
-                print(e)
-                err_msg = 'Invalid private_channel specified'
-                await self.bot.send_message(channel, err_msg)
+            except discord.Forbidden:
+                err_msg = '❌ Your bot does not have permission to create or edit a \
+                channel'
+                await self.bot.send_message(origin_channel, err_msg)
                 return
 
         # get emoji name(if unicode emoji) or get emoji object(if custom emoji)
@@ -192,12 +213,12 @@ class RoleCall:
             if self.isduplicate('role', entry):
                 bound_emoji = self._get_emoji_from_entry(entry)
                 bound_role_msg = "❌ the role {} is already linked to {}".format(entry.role, bound_emoji)
-                await self.bot.send_message(ctx.message.channel, content=bound_role_msg)
+                await self.bot.send_message(origin_channel, content=bound_role_msg)
                 return 
             if self.isduplicate('emoji', entry):
                 bound_role = await self._get_role_from_entry(entry)
                 bound_emoji_msg = "❌ the emoji {} is already linked to {}".format(entry.emoji, bound_role)
-                await self.bot.send_message(ctx.message.channel, content=bound_emoji_msg)
+                await self.bot.send_message(origin_channel, content=bound_emoji_msg)
                 return
 
         except Exception as e:
@@ -209,8 +230,13 @@ class RoleCall:
         try:
             await self.post_role(entry)
         except Exception as e:
-            msg = await self.post_entry(entry)
-            entry.content_or_message_id = msg.id
+            try:
+                msg = await self.post_entry(entry)
+                entry.content_or_message_id = msg.id
+            except discord.Forbidden:
+                err_msg = '❌ You do not have permission to post a message in \
+                the channel {}'.format(channel)
+                await self.bot.send_message(origin_channel, content=err_msg)
 
         # record the entry
         self._record_entry(entry)
@@ -292,7 +318,7 @@ class RoleCall:
             self.reaction_user_queue.add(user_id)
 
     async def queue_processor(self):
-        """ Iterates the reaction queue every  0.1 seconds. If reaction was 
+        """ Iterates the reaction queue every  0.1 new_role_permsseconds. If reaction was 
         added to a roleboard entry, corresponding role is assigned to user 
         depending on the emoji pressed. If a reaction was removed, role is 
         unassigned from user 
@@ -383,18 +409,15 @@ class RoleCall:
                 if role.name == object_name:
                     return role
             except Exception as e:              # if it is None, create new role
-                try:                            # try in case permission is needed
+                rand_color = discord.Colour(randint(0,RGB_VALUE_LIMIT))
+                await self.bot.create_role(server, name=object_name, 
+                                           mentionable=True, 
+                                           colour=rand_color)
 
-                    rand_color = discord.Colour(randint(0,RGB_VALUE_LIMIT))
-                    await self.bot.create_role(server, name=object_name, 
-                                               mentionable=True, 
-                                               colour=rand_color)
+                await asyncio.sleep(0.05)   # sleep while role is cooking
+                role = discord.utils.get(server.roles, name=object_name)
+                return role  
 
-                    await asyncio.sleep(0.05)   # sleep while role is cooking
-                    role = discord.utils.get(server.roles, name=object_name)
-                    return role  
-                except Exception as e:
-                    await self.bot.say(e)
 
         elif object_type == "channel":          # for channels
             channel = discord.utils.get(server.channels, name=object_name)
