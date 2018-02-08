@@ -201,7 +201,7 @@ class RoleCall:
             potential_custom_emoji_id = re.findall('\d+', emoji_name_or_obj)[0]
             if potential_custom_emoji_id in [e.id for e in server.emojis]:
                 emoji_name_or_obj = discord.utils.get(server.emojis, id=potential_custom_emoji_id)
-        except Exception as e:
+        except IndexError as e:
             pass # determined to be a unicode emoji
 
         # make Entry object
@@ -220,16 +220,15 @@ class RoleCall:
                 bound_emoji_msg = "❌ the emoji {} is already linked to {}".format(entry.emoji, bound_role)
                 await self.bot.send_message(origin_channel, content=bound_emoji_msg)
                 return
-
-        except Exception as e:
-            pass
+        except KeyError as e:
+            pass # user provided message content and not a message id
 
         # check if message ID was provided. If yes, and if the role is not 
         # linked to an emoji yet, post the new role to the message associated 
         # with the ID, if not, post the new entry to the chosen role board
         try:
             await self.post_role(entry)
-        except Exception as e:
+        except discord.HTTPException as e:
             try:
                 msg = await self.post_entry(entry)
                 entry.content_or_message_id = msg.id
