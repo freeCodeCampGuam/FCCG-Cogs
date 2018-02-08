@@ -48,7 +48,7 @@ class RoleCall:
         self.settings = dataIO.load_json(SETTINGS_PATH)
         self.reaction_queue = {}
         self.reaction_user_queue = set()
-        self.queue_processor_task = bot.loop.create_task(self.queue_processor())
+        self.queue_processor_task = self.bot.loop.create_task(self.queue_processor())
 
     def _record_entry(self, entry: Entry):
         """ record entry to settings file """
@@ -379,6 +379,9 @@ class RoleCall:
                 # unassign role from user who removed the reaction
                 if reaction['t'] == 'MESSAGE_REACTION_REMOVE':
                    await self.bot.remove_roles(reactor, role)
+
+    def __unload(self):
+        self.queue_processor_task.cancel()
         
 
     def _save(self):
