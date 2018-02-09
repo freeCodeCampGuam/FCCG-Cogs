@@ -99,6 +99,7 @@ class RoleCall:
                 return emoji
 
     @commands.group(pass_context=True, no_pm=True)
+    @checks.mod()
     async def rolecall(self, ctx):
         """ Add emojis to a message where each emoji corresponds to a chosen role. 
         If emoji is clicked, the corresponding role is assigned to the user. """
