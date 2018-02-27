@@ -13,6 +13,7 @@ import subprocess
 from glob import glob
 from queue import Queue, Empty
 import time
+from datetime import datetime
 from urllib.parse import urlparse
 from cogs.repl import interactive_results
 from cogs.repl import wait_for_first_response
@@ -28,6 +29,8 @@ except:
 SETTINGS_PATH = "data/jamcord/settings.json"
 INTERPRETERS_PATH = "data/jamcord/interpreters/"
 SAMPLE_PATH = 'data/jamcord/samples/'
+SESSION_PATH = 'data/jamcord/sessions/'
+
 SAMPLE_PATH_ABS = os.path.join(os.getcwd(), SAMPLE_PATH)
 
 NBS = '​'
@@ -1040,16 +1043,18 @@ class Jamcord:
         await self.bot.say(bye)
 
     def kill(self, channel):
-        self.sessions[channel.id]['repl'].kill()
-        if not self.sessions[channel.id]['console-less']:
-            console = self.sessions[channel.id]['console']
+        session = self.sessions[channel.id]
+        session['repl'].kill()
+        if not session['console-less']:
+            console = session['console']
             try:
-                self.sessions[channel.id]['pager_task'].cancel()
+                session['pager_task'].cancel()
             except:
                 print("not able to cancel {}'s pager".format(channel))
             self.bot.loop.create_task(try_delete(self.bot, console))
-        self.sessions[channel.id]['active'] = False
-        self.sessions[channel.id]['click_wait'].cancel()
+        session['active'] = False
+        session['click_wait'].cancel()
+        self.close_sesh(session)
 
     @checks.is_owner()
     @jam.command(pass_context=True, no_pm=True, name="on")
@@ -1127,7 +1132,10 @@ class Jamcord:
             'clean_after': clean,
             'interpreter': kind,
             'hush': repl_data['hush'],
-            'voice_client': None
+            'voice_client': None,
+            'sesh_file': None,
+            'sesh_written': 0,
+            'start_time': None
         }
 
         session = self.sessions[channel.id]
@@ -1153,6 +1161,9 @@ class Jamcord:
             await asyncio.sleep(.5)
 
         await self.bot.edit_message(msg, new_content='psst, head into the voice channel')
+
+        session['sesh_file'] = self.start_sesh_file(ctx.message)
+        session['start_time'] = datetime.now()
 
         while session['active']:
 
@@ -1190,6 +1201,7 @@ class Jamcord:
                            for ln in cleaned.split('\n')]
             fmt = '\n'.join(with_author)
 
+            self.add_to_sesh(session, fmt)
             session['output'].append(fmt)
             session['page_num'] = -1
 
@@ -1200,12 +1212,51 @@ class Jamcord:
 
         del self.sessions[channel.id]
 
+    def start_sesh_file(self, message):
+        name = "{} {} {} ({})".format(message.server,
+                                      message.channel,
+                                      message.timestamp,
+                                      message.id)
+        fname = '{}/{}.sesh'.format(SESSION_PATH, name)
+        open(fname, 'w').close()
+        return fname
+
+    def add_to_sesh(self, session, stuff):
+        sesh = session['sesh_file']
+        # don't need miliseconds
+        timestamp = str(datetime.now() - session['start_time'])[:8]
+        with open(sesh, 'a') as f:
+            f.write("{} {}\n".format(timestamp, stuff))
+        session['sesh_written'] += 1
+
+    def close_sesh(self, session):
+        if not session['sesh_written']:
+            os.remove(session['sesh_file'])
+
+    @commands.command(pass_context=True, no_pm=True)
+    async def sesh(self, ctx):
+        """description"""
+        server = ctx.message.server
+        channel = ctx.message.channel
+        author = ctx.message.author
+        ls = os.listdir(SESSION_PATH)
+        msg = '**Choose a sesh to upload:**\n'
+        msg += '\n'.join(["{}: {}".format(c, f) for c, f in enumerate(ls)])
+        await self.bot.say(msg)
+        answer = await self.bot.wait_for_message(timeout=120, author=author)
+        try:
+            f = ls[int(answer.content)]
+        except:
+            return await self.bot.say('Not an available choice.')
+        await self.bot.upload('{}/{}'.format(SESSION_PATH, f))
+
 
     async def keep_console_updated(self, ctx, session):
         channel = ctx.message.channel
         while session['active']:
             output = session['repl'].read().strip()
             if output:
+                self.add_to_sesh(session, output)
                 session['output'].append(output)
                 session['page_num'] = -1
             if not session['update_console'] and not output:
@@ -1404,7 +1455,7 @@ async def wait_for_reaction_remove(bot, emoji=None, *, user=None,
 
 
 def check_folders():
-    paths = ("data/jamcord", SAMPLE_PATH, INTERPRETERS_PATH)
+    paths = ("data/jamcord", SAMPLE_PATH, INTERPRETERS_PATH, SESSION_PATH)
     for path in paths:
         if not os.path.exists(path):
             print("Creating {} folder...".format(path))
