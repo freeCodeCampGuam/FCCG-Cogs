@@ -1223,8 +1223,9 @@ class Jamcord:
 
     def add_to_sesh(self, session, stuff):
         sesh = session['sesh_file']
+        timestamp = datetime.now() - session['start_time']
         # don't need miliseconds
-        timestamp = str(datetime.now() - session['start_time'])[:8]
+        timestamp = str(timestamp).partition('.')[0]
         with open(sesh, 'a') as f:
             f.write("{} {}\n".format(timestamp, stuff))
         session['sesh_written'] += 1
