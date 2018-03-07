@@ -147,12 +147,8 @@ class RoleCall:
         author = ctx.message.author
         origin_channel = ctx.message.channel
 
-        # check if role was mentioned 
-        nums_found = re.findall('\d+', role)
-        if nums_found:
-            potential_role_id = nums_found[0]
-            if potential_role_id in [r.id for r in server.roles]:
-                role_object = discord.utils.get(server.roles, id=potential_role_id)
+        # check if role was mentioned
+        role_object = await self.is_role_mention(server, role)
 
         # if role was not mentioned, check if the role indicated already exists
         # if it doesn't exist, check if the bot has permissions to create a new 
@@ -240,6 +236,14 @@ class RoleCall:
 
         # record the entry
         self._record_entry(entry)
+
+    def is_role_mention(self, server, role):
+        """ checks if role was mentioned """
+        nums_found = re.findall('\d+', role)
+        if nums_found:
+            potential_role_id = nums_found[0]
+            if potential_role_id in [r.id for r in server.roles]:
+                role_object = discord.utils.get(server.roles, id=potential_role_id)
 
     def isduplicate(self, otype, entry): 
         """ checks if role or emoji has already been used in the message """
